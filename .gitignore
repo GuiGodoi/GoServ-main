@@ -1,0 +1,32 @@
+# Node
+node_modules/
+dist/
+.vite/
+.env
+.env.local
+*.log
+
+# .NET
+bin/
+obj/
+**/*.user
+**/*.suo
+*.vs/
+*.DotSettings.user
+
+# IDEs
+.idea/
+*.swp
+
+# VS Code / Cursor — versionar so o que ajuda o time
+.vscode/*
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Docker / local
+*.pid

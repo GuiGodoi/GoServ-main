@@ -1,0 +1,102 @@
+:root {
+  --bg: #1a1510;
+  --bg-elevated: #2a221a;
+  --surface: #342a20;
+  --text: #f5efe6;
+  --muted: #b8a99a;
+  --accent: #e8a54b;
+  --accent-soft: rgba(232, 165, 75, 0.15);
+  --border: rgba(245, 239, 230, 0.08);
+  --danger: #c45c4a;
+  --radius: 14px;
+  --font: 'DM Sans', system-ui, sans-serif;
+  --display: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #3d2e1f 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, #2c3a2a 0%, transparent 45%),
+    var(--bg);
+}
+
+button {
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Modo kiosk (tablet no balcão / mesa) — mesmos artefatos, alvos maiores */
+html.kiosk,
+body.kiosk {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+body.kiosk {
+  cursor: default;
+}
+
+body.kiosk button,
+body.kiosk .tab,
+body.kiosk .add,
+body.kiosk .cart-cta,
+body.kiosk .primary {
+  min-height: 48px;
+  font-size: 1.05rem;
+}
+
+body.kiosk .menu-page,
+body.kiosk .page {
+  max-width: 900px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.kiosk-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--accent);
+  vertical-align: middle;
+}
+
+/* Mobile / celular */
+@media (max-width: 640px) {
+  body {
+    font-size: 16px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px; /* evita zoom automático no iOS */
+  }
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+

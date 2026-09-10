@@ -1,0 +1,8 @@
+bin/
+obj/
+**/*.md
+node_modules/
+frontend/dist
+*.log
+.vs
+.vscode

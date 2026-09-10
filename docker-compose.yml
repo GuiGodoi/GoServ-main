@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:15
+    container_name: goserv-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: goserv
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      # Host 5433 evita conflito se já existir outro Postgres na 5432
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d goserv"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Opcional: API via Docker (em desenvolvimento use `npm run dev` na raiz)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: goserv-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=goserv;Username=postgres;Password=postgres
+    ports:
+      - "5000:80"
+    profiles:
+      - full
+
+volumes:
+  db_data:
