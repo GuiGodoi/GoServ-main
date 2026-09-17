@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// Rotas de mesas e sessões: cadastro/gestão (equipe) e o fluxo do cliente
+    /// abrindo/usando a mesa pelo QR code (público).
+    /// </summary>
     [ApiController]
     [Route("api/tables")]
     public class TablesController : ControllerBase
@@ -17,6 +21,7 @@ namespace Backend.Controllers
             _service = service;
         }
 
+        /// <summary>Lista de mesas + sessão aberta em cada uma, para o painel da equipe.</summary>
         [HttpGet]
         [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Kitchen}")]
         public async Task<ActionResult<List<DiningTableDto>>> GetAll() =>
@@ -37,6 +42,7 @@ namespace Backend.Controllers
             }
         }
 
+        /// <summary>Dados públicos da mesa (nome da mesa/restaurante), exibidos antes do cliente digitar a senha do dia.</summary>
         [HttpGet("{id:int}/public")]
         [AllowAnonymous]
         public async Task<ActionResult<PublicTableDto>> GetPublic(int id)
@@ -45,6 +51,7 @@ namespace Backend.Controllers
             return table is null ? NotFound(new { message = "Mesa não encontrada." }) : Ok(table);
         }
 
+        /// <summary>O cliente digita nome + senha do dia para liberar a mesa (fluxo do QR code).</summary>
         [HttpPost("{id:int}/join")]
         [AllowAnonymous]
         public async Task<ActionResult<TableSessionDto>> Join(int id, JoinTableDto dto)
@@ -60,6 +67,7 @@ namespace Backend.Controllers
             }
         }
 
+        /// <summary>Abertura manual de sessão pela equipe (sem exigir a senha do dia).</summary>
         [HttpPost("{id:int}/sessions")]
         [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Kitchen}")]
         public async Task<ActionResult<TableSessionDto>> OpenSession(int id, OpenTableSessionDto? dto)
@@ -99,6 +107,7 @@ namespace Backend.Controllers
             }
         }
 
+        /// <summary>Confere se o token de sessão guardado no navegador do cliente ainda vale.</summary>
         [HttpGet("sessions/{accessToken}")]
         [AllowAnonymous]
         public async Task<ActionResult<TableSessionDto>> ValidateSession(string accessToken)

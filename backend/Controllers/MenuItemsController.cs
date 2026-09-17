@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// CRUD dos produtos do cardápio, incluindo upload/remoção de foto.
+    /// Leitura é pública; criar/editar/excluir exige login de Admin.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class MenuItemsController : ControllerBase
@@ -30,6 +34,8 @@ namespace Backend.Controllers
             return item is null ? NotFound() : Ok(item);
         }
 
+        // Serve a foto do produto como imagem (não como JSON). O cache de 1h evita
+        // que o navegador baixe a mesma foto de novo a cada vez que a lista recarrega.
         [HttpGet("{id:int}/photo")]
         [AllowAnonymous]
         [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any)]
@@ -70,6 +76,8 @@ namespace Backend.Controllers
             }
         }
 
+        // Recebe o arquivo de imagem enviado (multipart/form-data) e manda pro
+        // service converter/redimensionar antes de salvar no banco.
         [HttpPost("{id:int}/photo")]
         [Authorize(Roles = UserRoles.Admin)]
         [RequestSizeLimit(ImageConverter.MaxUploadBytes)]

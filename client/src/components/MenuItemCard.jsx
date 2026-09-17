@@ -1,7 +1,10 @@
+// Card de um produto na lista do cardápio (foto, nome, preço e botão de adicionar).
 import { formatPrice } from '../utils'
 
 export default function MenuItemCard({ item, onAdd, browseOnly = false }) {
   const unavailable = item.available === false
+  // "browseOnly" é usado na navegação livre (sem mesa vinculada): o cliente só
+  // pode olhar o cardápio, não adicionar nada ao carrinho.
   const canAdd = Boolean(onAdd) && !unavailable && !browseOnly
   const onPromo = Boolean(item.isOnPromo && item.originalPrice != null)
 

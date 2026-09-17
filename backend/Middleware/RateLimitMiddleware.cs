@@ -4,7 +4,11 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Middleware
 {
-    /// <summary>Limite simples de requisições por IP (janela fixa em memória).</summary>
+    /// <summary>
+    /// Limite simples de requisições por IP (janela fixa em memória): se um IP
+    /// fizer requisições demais em pouco tempo, a API responde 429 (Too Many
+    /// Requests) até a janela de tempo virar. Protege contra abuso/DoS básico.
+    /// </summary>
     public class RateLimitMiddleware
     {
         private static readonly ConcurrentDictionary<string, WindowCounter> Counters = new();
@@ -32,10 +36,15 @@ namespace Backend.Middleware
                 return;
             }
 
+            // A "janela" (window) é um bloco fixo de tempo (ex: os 60 segundos atuais).
+            // Cada IP tem um contador por janela; ao virar a janela, o contador reseta sozinho
+            // (é uma chave nova no dicionário), sem precisar de nenhuma limpeza manual.
             var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var windowKey = $"{ip}:{GetWindowId()}";
             var counter = Counters.GetOrAdd(windowKey, _ => new WindowCounter());
 
+            // Interlocked.Increment soma de forma "thread-safe" (várias requisições
+            // podem chegar ao mesmo tempo e mexer nesse contador simultaneamente).
             if (Interlocked.Increment(ref counter.Count) > _options.RateLimitPermitLimit)
             {
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -50,6 +59,8 @@ namespace Backend.Middleware
             await _next(context);
         }
 
+        // Identifica em qual "janela" de tempo estamos agora, dividindo o relógio
+        // em blocos do tamanho configurado (ex: blocos de 60 em 60 segundos).
         private long GetWindowId()
         {
             var seconds = Math.Max(1, _options.RateLimitWindowSeconds);

@@ -1,5 +1,6 @@
 namespace Backend.Models
 {
+    /// <summary>Um adicional escolhido dentro de um item do pedido (nome/preço copiados do Addon original).</summary>
     public class OrderItemAddon
     {
         public int Id { get; set; }

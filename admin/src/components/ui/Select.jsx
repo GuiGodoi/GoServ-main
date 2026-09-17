@@ -21,6 +21,9 @@ export default function Select({
   const [highlight, setHighlight] = React.useState(-1)
   const [menuWidth, setMenuWidth] = React.useState(null)
 
+  // Este componente desenha o dropdown "na mão" (div/ul), mas mantém um
+  // <select> nativo escondido (veja mais abaixo) só para o navegador continuar
+  // validando "required" em formulários comuns.
   const selected = options.find((o) => String(o.value) === String(value))
   const display = selected?.label ?? placeholder
   const isPlaceholder = !selected
@@ -82,6 +85,8 @@ export default function Select({
     })
   }
 
+  // Suporte a teclado (acessibilidade): abrir com seta/Enter/espaço, navegar
+  // as opções com as setas e confirmar com Enter/espaço, como um <select> nativo.
   function onTriggerKeyDown(e) {
     if (disabled) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {

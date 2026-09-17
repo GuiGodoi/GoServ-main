@@ -1,3 +1,5 @@
+// DTOs relacionados a pedidos: criação (o que o cliente manda) e leitura
+// (o que a API devolve, já com totais calculados no servidor).
 namespace Backend.Dtos
 {
     public class AddonDto
@@ -26,6 +28,7 @@ namespace Backend.Dtos
 
     public class CreateOrderDto
     {
+        /// <summary>Token da sessão de mesa aberta (identifica quem está pedindo).</summary>
         public string? AccessToken { get; set; }
         public string? CustomerNotes { get; set; }
         public List<CreateOrderItemDto> Items { get; set; } = [];

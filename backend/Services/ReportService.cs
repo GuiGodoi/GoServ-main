@@ -3,8 +3,10 @@ using Backend.Repositories;
 
 namespace Backend.Services
 {
+    /// <summary>Monta o relatório do dia (vendas, ticket médio, mais vendidos).</summary>
     public interface IReportService
     {
+        /// <summary>Se a data não for informada, usa o dia atual.</summary>
         Task<DailyReportDto> GetDailyReportAsync(DateOnly? date);
     }
 

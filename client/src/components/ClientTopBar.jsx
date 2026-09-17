@@ -5,6 +5,8 @@ import { fetchRestaurant } from '../services/api'
  * Barra superior do wireframe: nome do estabelecimento + MESA XX em todas as telas do client.
  */
 export default function ClientTopBar({ tableLabel, title }) {
+  // "GoServ" é só o valor inicial exibido enquanto o nome real do
+  // estabelecimento (vindo da API) ainda não chegou.
   const [name, setName] = React.useState('GoServ')
 
   React.useEffect(() => {

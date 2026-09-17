@@ -1,3 +1,4 @@
+// Barra fixa no rodapé do cardápio mostrando o resumo do carrinho (some se estiver vazio).
 import { Link } from 'react-router-dom'
 import { useCart } from '../cart/CartContext'
 import { formatPrice } from '../utils'

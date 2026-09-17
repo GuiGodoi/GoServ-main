@@ -1,3 +1,5 @@
+// Camada única de acesso à API do backend para o painel admin: guarda a
+// sessão de login (token JWT) e centraliza todas as chamadas HTTP.
 const TOKEN_KEY = 'goserv_admin_token'
 const USER_KEY = 'goserv_admin_user'
 
@@ -35,6 +37,9 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY)
 }
 
+// Faz a chamada HTTP já autenticada (manda o token JWT salvo, se houver) e
+// trata os casos comuns: 401 (sessão expirada/inválida) manda pro login,
+// 204 vira null, e erro HTTP vira exceção JS com a mensagem do backend.
 async function request(path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
@@ -83,6 +88,8 @@ export const api = {
   updateMenuItem: (id, payload) =>
     request(`/menuitems/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteMenuItem: (id) => request(`/menuitems/${id}`, { method: 'DELETE' }),
+  // Upload de foto usa FormData (não JSON), por isso não passa pela função
+  // request() genérica — mas repete a mesma lógica de token e tratamento de erro.
   uploadMenuItemPhoto: async (id, file) => {
     const headers = {}
     const token = getToken()

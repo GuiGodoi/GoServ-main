@@ -7,12 +7,16 @@ export async function getCroppedImageBlob(imageSrc, pixelCrop, rotation = 0) {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas não disponível')
 
+  // "safeArea" é um quadrado grande o bastante para caber a imagem inteira
+  // girada em qualquer ângulo, sem cortar as pontas (por isso o Math.sqrt(2),
+  // que é a diagonal de um quadrado — o pior caso de uma rotação).
   const maxSize = Math.max(image.width, image.height)
   const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2))
 
   canvas.width = safeArea
   canvas.height = safeArea
 
+  // Desenha a imagem girada e centralizada nesse quadrado "seguro".
   ctx.translate(safeArea / 2, safeArea / 2)
   ctx.rotate((rotation * Math.PI) / 180)
   ctx.translate(-safeArea / 2, -safeArea / 2)
@@ -22,6 +26,8 @@ export async function getCroppedImageBlob(imageSrc, pixelCrop, rotation = 0) {
     safeArea / 2 - image.height * 0.5
   )
 
+  // Agora recorta só a área que o usuário selecionou (pixelCrop), reaproveitando
+  // os pixels já desenhados/girados no passo anterior.
   const data = ctx.getImageData(0, 0, safeArea, safeArea)
   canvas.width = pixelCrop.width
   canvas.height = pixelCrop.height

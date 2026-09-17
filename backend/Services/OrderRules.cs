@@ -26,6 +26,9 @@ namespace Backend.Services
         public static decimal CalculateOrderTotal(IEnumerable<decimal> lineTotals) =>
             Math.Round(lineTotals.Sum(), 2, MidpointRounding.AwayFromZero);
 
+        // Máquina de estados do pedido: de cada status, só é permitido avançar
+        // para os status listados aqui (ex: de "Preparing" só dá pra ir para
+        // "Ready" ou "Cancelled", nunca voltar para "Received").
         private static readonly Dictionary<string, string[]> AllowedTransitions = new()
         {
             [Models.OrderStatuses.AwaitingPayment] =

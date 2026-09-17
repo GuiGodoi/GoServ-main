@@ -2,6 +2,8 @@ import React from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
+// Atalhos de demo: preenchem o formulário com as credenciais dos usuários
+// criados pelo seed do banco (ver backend/Data/DbSeeder.cs), só para agilizar testes.
 const PRESETS = {
   admin: {
     label: 'Admin',
@@ -25,6 +27,8 @@ export default function LoginPage() {
   const [error, setError] = React.useState('')
   const [busy, setBusy] = React.useState(false)
 
+  // Se o usuário tentou acessar uma página protegida sem estar logado, o
+  // ProtectedRoute manda pra cá guardando de onde veio, para voltar pra lá após o login.
   const from = location.state?.from?.pathname || '/'
 
   React.useEffect(() => {

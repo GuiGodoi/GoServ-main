@@ -1,3 +1,5 @@
+// Contexto de autenticação do painel admin: guarda o usuário logado e expõe
+// login()/logout() para qualquer tela via useAuth().
 import React from 'react'
 import {
   api,
@@ -11,8 +13,12 @@ const AuthContext = React.createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = React.useState(() => getStoredUser())
+  // "ready" evita mostrar a tela de login por um instante antes de confirmar
+  // se o token salvo ainda é válido (evita o "piscar" login -> logado).
   const [ready, setReady] = React.useState(false)
 
+  // Ao carregar o app, se já existe um token salvo, confirma com o backend
+  // que ele ainda é válido (GET /api/auth/me) antes de considerar o usuário logado.
   React.useEffect(() => {
     let cancelled = false
 
@@ -35,6 +41,8 @@ export function AuthProvider({ children }) {
     }
 
     bootstrap()
+    // Se o componente for desmontado antes da resposta chegar, "cancelled"
+    // evita atualizar o estado de um componente que não existe mais.
     return () => {
       cancelled = true
     }

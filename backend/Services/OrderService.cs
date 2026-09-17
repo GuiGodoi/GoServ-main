@@ -20,6 +20,11 @@ namespace Backend.Services
         Task<OrderDto?> ConfirmPaymentAsync(Guid publicId, string? ipAddress = null);
     }
 
+    /// <summary>
+    /// Regras de negócio dos pedidos: cria o pedido validando tudo no servidor
+    /// (preços, disponibilidade, limites de segurança), confirma o pagamento
+    /// simulado (Pix) e controla a transição de status até a entrega.
+    /// </summary>
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orders;
@@ -67,11 +72,15 @@ namespace Backend.Services
             }).ToList();
         }
 
+        // Cria um pedido novo. Todo o preço é recalculado aqui a partir dos dados
+        // do banco — nada que vem do front-end (preço, nome do produto) é confiável,
+        // só usamos os Ids enviados para buscar os valores reais no servidor.
         public async Task<OrderDto> CreateAsync(CreateOrderDto dto)
         {
             if (dto.Items is null || dto.Items.Count == 0)
                 throw new ArgumentException("O pedido precisa ter pelo menos um item.");
 
+            // Só aceita pedido se a mesa tiver uma sessão válida (aberta com a senha do dia).
             TableSession? session = null;
             if (string.IsNullOrWhiteSpace(dto.AccessToken))
                 throw new ArgumentException(
@@ -81,6 +90,8 @@ namespace Backend.Services
             if (session is null)
                 throw new ArgumentException("Sessão da mesa inválida ou expirada.");
 
+            // Busca todos os produtos pedidos de uma vez e confere que existem e
+            // estão disponíveis (impede pedir um produto removido/pausado do cardápio).
             var menuItemIds = dto.Items.Select(i => i.MenuItemId).Distinct().ToList();
             var catalog = new Dictionary<int, MenuItem>();
             foreach (var id in menuItemIds)
@@ -114,6 +125,8 @@ namespace Backend.Services
                     throw new ArgumentException("Quantidade inválida.");
 
                 var menuItem = catalog[line.MenuItemId];
+                // Preço real: usa o preço promocional se houver promoção ativa agora,
+                // senão o preço normal — nunca o "ClientUnitPrice" que o front manda.
                 var unitPrice = livePromos.TryGetValue(menuItem.Id, out var promo)
                     ? promo.PromoPrice
                     : menuItem.Price;
@@ -121,6 +134,8 @@ namespace Backend.Services
 
                 foreach (var addonRef in line.Addons.Select(a => a.AddonId).Distinct())
                 {
+                    // Confere que o adicional existe, está disponível e pertence
+                    // mesmo a este produto (evita "colar" um adicional de outro item).
                     if (!addonCatalog.TryGetValue(addonRef, out var addon) ||
                         addon.MenuItemId != menuItem.Id ||
                         !addon.Available)
@@ -156,6 +171,9 @@ namespace Backend.Services
 
             order.Total = OrderRules.CalculateOrderTotal(order.Items.Select(i => i.LineTotal));
 
+            // Checa os limites de segurança/abuso da sessão (teto de gastos e
+            // quantidade máxima de pedidos), usando o cap específico da sessão
+            // se a equipe tiver liberado um valor diferente do padrão.
             if (session is not null)
             {
                 var spent = await _orders.GetSessionSpentAsync(session.Id);
@@ -173,11 +191,16 @@ namespace Backend.Services
             return ToDto(created!);
         }
 
+        // Simula o webhook que o Mercado Pago chamaria quando o Pix é pago:
+        // libera o pedido (AwaitingPayment -> Received) e só a partir daqui
+        // ele aparece para a cozinha.
         public async Task<OrderDto?> ConfirmPaymentAsync(Guid publicId, string? ipAddress = null)
         {
             var order = await _orders.GetByPublicIdAsync(publicId);
             if (order is null) return null;
 
+            // Se o pagamento já tinha sido confirmado antes, devolve o pedido como
+            // está em vez de dar erro — evita falhar se o webhook for chamado 2x.
             if (order.Status == OrderStatuses.Received ||
                 order.Status == OrderStatuses.Preparing ||
                 order.Status == OrderStatuses.Ready ||
@@ -189,6 +212,7 @@ namespace Backend.Services
             if (order.Status != OrderStatuses.AwaitingPayment)
                 throw new InvalidOperationException("Este pedido não está aguardando pagamento.");
 
+            // O Pix simulado tem um prazo de validade (RestaurantOptions.PixExpiresMinutes).
             var expiresAt = order.CreatedAt.AddMinutes(_restaurant.PixExpiresMinutes);
             if (DateTime.UtcNow > expiresAt)
                 throw new InvalidOperationException("O Pix expirou. Faça um novo pedido.");
@@ -229,6 +253,9 @@ namespace Backend.Services
             return order is null ? null : ToDto(order);
         }
 
+        // Sem filtro de status explícito, só mostra os pedidos "visíveis na cozinha"
+        // (Received/Preparing/Ready) — assim o KDS não mostra pedidos ainda não
+        // pagos nem os já entregues/cancelados, a menos que se peça um status específico.
         public async Task<List<OrderDto>> GetAllAsync(string? status = null)
         {
             var orders = await _orders.GetAllAsync(status);
@@ -240,6 +267,8 @@ namespace Backend.Services
                 .ToList();
         }
 
+        // Muda o status do pedido (ex: Received -> Preparing) e registra no log de
+        // auditoria quem fez a mudança, respeitando a máquina de estados de OrderRules.
         public async Task<OrderDto?> UpdateStatusAsync(
             int id,
             string status,
@@ -277,6 +306,8 @@ namespace Backend.Services
             return dto;
         }
 
+        // Converte o pedido salvo no banco no formato que a API devolve.
+        // O código Pix só é incluído enquanto o pedido está aguardando pagamento.
         private OrderDto ToDto(Order order)
         {
             var expiresAt = order.CreatedAt.AddMinutes(_restaurant.PixExpiresMinutes);

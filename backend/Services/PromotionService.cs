@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Services
 {
+    /// <summary>Regras de negócio das promoções: CRUD e cálculo de quais estão "ao vivo" agora.</summary>
     public interface IPromotionService
     {
         Task<List<PromotionDto>> GetAllAsync(bool liveOnly = false);
@@ -12,6 +13,7 @@ namespace Backend.Services
         Task<PromotionDto> CreateAsync(CreatePromotionDto dto);
         Task<PromotionDto?> UpdateAsync(int id, UpdatePromotionDto dto);
         Task<bool> DeleteAsync(int id);
+        /// <summary>Para cada produto pedido, devolve a promoção ativa agora (se houver).</summary>
         Task<Dictionary<int, Promotion>> GetLiveByMenuItemIdsAsync(IEnumerable<int> menuItemIds);
     }
 
@@ -109,6 +111,8 @@ namespace Backend.Services
             return true;
         }
 
+        // Busca, entre os produtos informados, quais têm promoção dentro do
+        // período (StartsAt <= agora < EndsAt) e marcada como ativa.
         public async Task<Dictionary<int, Promotion>> GetLiveByMenuItemIdsAsync(IEnumerable<int> menuItemIds)
         {
             var ids = menuItemIds.Distinct().ToList();
@@ -139,6 +143,8 @@ namespace Backend.Services
                 throw new ArgumentException("A data final deve ser depois da data inicial.");
         }
 
+        // Datas podem chegar do front-end sem fuso definido; aqui garantimos que
+        // tudo fica salvo em UTC, para comparar corretamente com DateTime.UtcNow.
         private static DateTime EnsureUtc(DateTime value) =>
             value.Kind == DateTimeKind.Unspecified
                 ? DateTime.SpecifyKind(value, DateTimeKind.Utc)

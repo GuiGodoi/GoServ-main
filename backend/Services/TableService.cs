@@ -7,14 +7,21 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Services
 {
+    /// <summary>
+    /// Regras de negócio das mesas: cadastro, abertura de sessão pelo cliente
+    /// (via senha do dia) ou pelo admin, e geração dos links/QR codes.
+    /// </summary>
     public interface ITableService
     {
         Task<List<DiningTableDto>> GetTablesAsync();
         Task<DiningTableDto> CreateTableAsync(CreateDiningTableDto dto);
+        /// <summary>Abertura manual de sessão pelo admin (sem exigir a senha do dia).</summary>
         Task<TableSessionDto> OpenSessionAsync(int tableId, OpenTableSessionDto dto);
+        /// <summary>Fluxo do cliente: digita a senha do dia para liberar/renovar a mesa.</summary>
         Task<TableSessionDto> JoinTableAsync(int tableId, JoinTableDto dto);
         Task<PublicTableDto?> GetPublicTableAsync(int tableId);
         Task<bool> CloseSessionAsync(int tableId);
+        /// <summary>Confere se o token da sessão (guardado no navegador do cliente) ainda é válido.</summary>
         Task<TableSessionDto?> ValidateTokenAsync(string accessToken);
         Task<TableSessionDto?> RaiseSessionCapAsync(int tableId, decimal spendingCap);
         Task<QrCatalogDto> GetQrCatalogAsync();
@@ -89,6 +96,7 @@ namespace Backend.Services
             if (table is null || !table.Active)
                 throw new ArgumentException("Mesa não encontrada ou inativa.");
 
+            // Duração padrão de 2h, limitada a no máximo 24h para evitar sessão "eterna".
             var minutes = dto.DurationMinutes <= 0 ? 120 : Math.Min(dto.DurationMinutes, 24 * 60);
             await _repository.CloseOpenSessionsAsync(tableId);
 
@@ -124,6 +132,8 @@ namespace Backend.Services
             var minutes = dto.DurationMinutes <= 0 ? 120 : Math.Min(dto.DurationMinutes, 24 * 60);
             var guest = dto.GuestName.Trim();
 
+            // Se a mesa já tem uma sessão aberta (ex: outra pessoa do mesmo grupo já
+            // entrou), só atualiza o nome e renova o prazo, em vez de criar outra sessão.
             var open = await _repository.GetOpenSessionByTableIdAsync(tableId);
             if (open is not null)
             {
@@ -212,6 +222,8 @@ namespace Backend.Services
             };
         }
 
+        // Gera um token aleatório e seguro (24 bytes) para identificar a sessão da
+        // mesa, formatado em Base64 "URL-safe" (sem +, / ou = ) para poder ir direto na URL.
         private static string GenerateToken()
         {
             var bytes = RandomNumberGenerator.GetBytes(24);

@@ -13,11 +13,14 @@ namespace Backend.Data
             await SeedUsersAsync(db);
         }
 
+        // Cria os dois usuários iniciais só se o banco ainda não tiver nenhum
+        // usuário (evita duplicar/sobrescrever toda vez que a API sobe).
         private static async Task SeedUsersAsync(ApplicationDbContext db)
         {
             if (await db.Users.AnyAsync())
                 return;
 
+            // Senhas de exemplo já em hash (BCrypt) — nunca salvamos senha em texto puro.
             db.Users.AddRange(
                 new User
                 {

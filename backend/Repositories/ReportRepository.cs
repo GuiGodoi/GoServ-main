@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Repositories
 {
+    /// <summary>Monta os números do relatório diário direto a partir do banco.</summary>
     public interface IReportRepository
     {
         Task<DailyReportDto> GetDailyReportAsync(DateOnly date);
@@ -21,6 +22,7 @@ namespace Backend.Repositories
 
         public async Task<DailyReportDto> GetDailyReportAsync(DateOnly date)
         {
+            // Janela de tempo do dia pedido: da meia-noite até a meia-noite do dia seguinte (UTC).
             var start = DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
             var end = start.AddDays(1);
 
@@ -30,6 +32,8 @@ namespace Backend.Repositories
                 .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
                 .ToListAsync();
 
+            // "Vendas" só conta pedidos que de fato viraram venda: sem cancelados
+            // e sem os que ainda estão esperando o pagamento ser confirmado.
             var salesOrders = dayOrders
                 .Where(o =>
                     o.Status != OrderStatuses.Cancelled &&
@@ -39,6 +43,7 @@ namespace Backend.Repositories
             var totalSales = salesOrders.Sum(o => o.Total);
             var count = salesOrders.Count;
 
+            // Agrupa os itens vendidos por produto para achar os 10 mais vendidos do dia.
             var topItems = salesOrders
                 .SelectMany(o => o.Items)
                 .GroupBy(i => new { i.MenuItemId, i.MenuItemName })
@@ -54,6 +59,7 @@ namespace Backend.Repositories
                 .Take(10)
                 .ToList();
 
+            // Quantidade de pedidos do dia por status (inclui todos, mesmo cancelados/aguardando pagamento).
             var byStatus = dayOrders
                 .GroupBy(o => o.Status)
                 .Select(g => new OrdersByStatusDto

@@ -22,6 +22,8 @@ const TRACK_STEPS = [
   { key: 'Ready', label: 'Pronto' },
 ]
 
+// Decide se um passo da timeline já passou ("done"), é o atual ("current") ou
+// ainda não chegou ("todo"), comparando a posição do passo com o status do pedido.
 function stepState(orderStatus, stepKey) {
   if (orderStatus === 'AwaitingPayment' || orderStatus === 'Cancelled') {
     return 'todo'
@@ -43,6 +45,8 @@ function stepState(orderStatus, stepKey) {
   return 'todo'
 }
 
+// Tela que o cliente deixa aberta acompanhando o pedido em tempo real (via
+// SignalR) depois do pagamento, até ele ficar pronto/entregue/cancelado.
 export default function OrderStatusPage() {
   const { orderId: publicId, tableToken } = useParams()
   const navigate = useNavigate()
@@ -66,6 +70,8 @@ export default function OrderStatusPage() {
         if (cancelled) return
         setOrder(initial)
 
+        // Essa tela é só para pedido já pago; se ainda estiver aguardando
+        // pagamento, manda de volta pra tela de pagamento.
         if (initial.status === 'AwaitingPayment') {
           navigate(payPath, { replace: true })
           return
@@ -99,6 +105,8 @@ export default function OrderStatusPage() {
     }
   }, [publicId, navigate, payPath])
 
+  // Dispara uma notificação do navegador quando o pedido fica pronto (só uma
+  // vez por pedido, controlado pelo "readyAlertSent" — útil se a aba estiver em segundo plano).
   React.useEffect(() => {
     if (order?.status !== 'Ready' || readyAlertSent.current) return
     readyAlertSent.current = true

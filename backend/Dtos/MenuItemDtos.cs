@@ -1,5 +1,7 @@
+// DTOs dos produtos do cardápio.
 namespace Backend.Dtos
 {
+    /// <summary>Produto devolvido pela API, já com informação de promoção calculada.</summary>
     public class MenuItemDto
     {
         public int Id { get; set; }

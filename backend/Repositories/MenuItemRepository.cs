@@ -15,7 +15,9 @@ namespace Backend.Repositories
 
         public Task<List<MenuItem>> GetAllAsync(bool onlyAvailable = false)
         {
-            // Não carrega PhotoData (BLOB) na listagem
+            // Não carrega PhotoData (BLOB) na listagem: a foto pode ser pesada e
+            // a lista de produtos não precisa dela, só de saber se ela existe
+            // (via PhotoContentType) para montar a URL da imagem.
             var query = _db.MenuItems.AsNoTracking().AsQueryable();
             if (onlyAvailable)
                 query = query.Where(m => m.Available);
@@ -67,6 +69,8 @@ namespace Backend.Repositories
                 })
                 .FirstOrDefaultAsync();
 
+        // Método separado que busca só os bytes da foto — usado pela rota que serve
+        // a imagem, para não trazer o resto dos dados do produto à toa.
         public Task<MenuItem?> GetPhotoAsync(int id) =>
             _db.MenuItems.AsNoTracking()
                 .Where(m => m.Id == id)
@@ -93,6 +97,8 @@ namespace Backend.Repositories
 
         public async Task DeleteAsync(MenuItem item)
         {
+            // O "item" recebido veio de uma consulta AsNoTracking (sem PhotoData),
+            // então buscamos de novo a versão rastreada pelo EF Core antes de remover.
             var tracked = await _db.MenuItems.FirstOrDefaultAsync(m => m.Id == item.Id);
             if (tracked is null) return;
             _db.MenuItems.Remove(tracked);

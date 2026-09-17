@@ -15,8 +15,11 @@ import CartBar from '../components/CartBar'
 import ClientTopBar from '../components/ClientTopBar'
 import PageLoading from '../components/PageLoading'
 
+// Id "falso" de categoria usado só para a aba de promoções, que não existe no banco.
 const PROMO_TAB = 'promos'
 
+// Tela principal: mostra o cardápio (com abas de categoria) e, quando a mesa
+// está liberada, permite adicionar itens ao carrinho pelo CustomizeModal.
 export default function MenuPage({ browseOnly = false }) {
   const { tableToken } = useParams()
   const kiosk = useKioskMode()
@@ -31,6 +34,7 @@ export default function MenuPage({ browseOnly = false }) {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState('')
 
+  // Só permite montar pedido se a página não for "só consulta" e existir uma mesa vinculada.
   const canOrder = !browseOnly && Boolean(tableToken)
 
   React.useEffect(() => {
@@ -40,6 +44,8 @@ export default function MenuPage({ browseOnly = false }) {
       setLoading(true)
       setError('')
       try {
+        // Se veio de uma mesa (URL "/mesa/:tableToken"), confirma que a sessão
+        // ainda é válida antes de mostrar o cardápio "liberado para pedir".
         if (tableToken) {
           const tableSession = await validateTableSession(tableToken)
           if (cancelled) return
@@ -53,6 +59,8 @@ export default function MenuPage({ browseOnly = false }) {
         if (cancelled) return
         setCategories(cats)
         setItems(menu)
+        // Abre direto na aba "Promoções" se houver alguma promo disponível
+        // agora; senão cai na primeira categoria de verdade.
         const hasPromo = menu.some((i) => i.isOnPromo && i.available !== false)
         setActiveCategoryId(hasPromo ? PROMO_TAB : cats[0]?.id ?? PROMO_TAB)
       } catch (e) {

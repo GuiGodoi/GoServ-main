@@ -6,6 +6,8 @@ import { createOrder, validateTableSession } from '../services/api'
 import ClientTopBar from '../components/ClientTopBar'
 import { formatPrice } from '../utils'
 
+// Tela de revisão do carrinho: lista os itens escolhidos, permite ajustar
+// quantidade/remover, e envia o pedido (POST /api/orders) ao confirmar.
 export default function CartPage() {
   const { tableToken } = useParams()
   const navigate = useNavigate()
@@ -40,6 +42,8 @@ export default function CartPage() {
     }
   }, [tableToken])
 
+  // Envia o pedido pro backend (que recalcula os preços de verdade) e, se der
+  // certo, esvazia o carrinho e leva o cliente pra tela de pagamento (Pix simulado).
   async function handleCheckout() {
     setBusy(true)
     setError('')

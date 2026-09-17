@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// CRUD de promoções. A listagem pública pode filtrar só as que estão "ao
+    /// vivo" agora (liveOnly); o resto exige login de Admin.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class PromotionsController : ControllerBase

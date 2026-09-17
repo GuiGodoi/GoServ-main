@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { api } from '../services/api'
 import { useContentLoading } from '../components/ui'
 
+// Gera a imagem do QR code (como data URL) a partir do texto/URL que ele deve abrir.
 async function toDataUrl(text) {
   return QRCode.toDataURL(text, {
     errorCorrectionLevel: 'M',
@@ -19,6 +20,7 @@ function downloadPng(dataUrl, filename) {
   a.click()
 }
 
+// Abre uma nova aba só com o QR code grande, pronta para imprimir (ex: colar na mesa).
 function openPreview(dataUrl, title, url) {
   const w = window.open('', '_blank')
   if (!w) return
@@ -37,6 +39,8 @@ function openPreview(dataUrl, title, url) {
   w.document.close()
 }
 
+// Página com os QR codes fixos: um pro cardápio (só consulta) e um por mesa
+// (leva à tela de senha do dia). Também permite gerar uma nova senha do dia.
 export default function QrCodesPage() {
   const [catalog, setCatalog] = React.useState(null)
   const [previews, setPreviews] = React.useState({})
@@ -51,6 +55,7 @@ export default function QrCodesPage() {
       const data = await api.getQrCatalog()
       setCatalog(data)
 
+      // Gera todas as imagens de QR code de uma vez (cardápio + cada mesa) em paralelo.
       const entries = [
         ['menu', data.menuUrl],
         ...data.tables.map((t) => [`t-${t.id}`, t.url]),

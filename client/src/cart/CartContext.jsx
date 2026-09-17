@@ -1,7 +1,11 @@
+// Contexto do carrinho: guarda os itens escolhidos pelo cliente enquanto ele
+// navega pelo cardápio, disponível para qualquer componente via useCart().
 import React from 'react'
 
 const CartContext = React.createContext(null)
 
+// Id local (só no navegador) para cada linha do carrinho, usado como "key"
+// do React e para editar/remover uma linha específica.
 let lineIdSeq = 1
 
 export function CartProvider({ children, accessToken = null }) {
@@ -43,6 +47,8 @@ export function CartProvider({ children, accessToken = null }) {
     setCustomerNotes('')
   }
 
+  // Total só para exibir na tela (uma estimativa). O valor que realmente vale
+  // é sempre recalculado pelo backend ao criar o pedido — o front nunca decide o preço final.
   function lineEstimate(line) {
     const addons = (line.addons || []).reduce((sum, a) => sum + Number(a.price), 0)
     return (line.unitPrice + addons) * line.quantity
@@ -51,6 +57,8 @@ export function CartProvider({ children, accessToken = null }) {
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0)
   const estimateTotal = lines.reduce((sum, line) => sum + lineEstimate(line), 0)
 
+  // Monta o corpo da requisição POST /api/orders. "clientUnitPrice" vai só
+  // como referência — o backend ignora esse valor e recalcula tudo sozinho.
   function toCreatePayload() {
     return {
       accessToken: accessToken || null,

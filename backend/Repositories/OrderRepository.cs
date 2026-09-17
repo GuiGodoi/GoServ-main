@@ -51,6 +51,7 @@ namespace Backend.Repositories
             await _db.SaveChangesAsync();
         }
 
+        // Pedidos cancelados não contam no total gasto nem no limite de pedidos da sessão.
         public async Task<decimal> GetSessionSpentAsync(int tableSessionId)
         {
             var sum = await _db.Orders

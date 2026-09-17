@@ -1,3 +1,5 @@
+// Modal (bottom-sheet) onde o cliente escolhe quantidade, adicionais e
+// observações antes de colocar um produto no carrinho.
 import React from 'react'
 import { fetchAddons } from '../services/api'
 import { formatPrice } from '../utils'
@@ -29,6 +31,8 @@ export default function CustomizeModal({ item, tableLabel, onClose, onConfirm })
     }
   }, [item.id])
 
+  // Só uma estimativa para exibir no botão — o preço final de verdade é
+  // sempre recalculado pelo backend quando o pedido é enviado.
   const selectedAddons = addons.filter((a) => selected[a.id])
   const estimate =
     (Number(item.price) +

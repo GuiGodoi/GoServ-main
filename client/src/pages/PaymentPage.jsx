@@ -6,6 +6,9 @@ import { useKioskIdleReset } from '../hooks/useKioskIdleReset'
 import ClientTopBar from '../components/ClientTopBar'
 import { formatPrice, formatCountdown } from '../utils'
 
+// Tela de pagamento (Pix simulado): mostra o "QR code"/código copia-e-cola e
+// espera a confirmação — tanto via SignalR (se outro lugar confirmar) quanto
+// pelo botão "Simular pagamento", que chama o webhook fake do backend.
 export default function PaymentPage() {
   const { orderId: publicId, tableToken } = useParams()
   const navigate = useNavigate()
@@ -22,6 +25,8 @@ export default function PaymentPage() {
 
   useKioskIdleReset(menuPath)
 
+  // Só existe para forçar o componente a re-renderizar a cada segundo, assim
+  // o contador regressivo (formatCountdown) na tela vai atualizando sozinho.
   React.useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000)
     return () => clearInterval(id)
@@ -77,6 +82,9 @@ export default function PaymentPage() {
     }
   }
 
+  // Em produção, quem chamaria isso seria o provedor de pagamento (Pix) via
+  // webhook; aqui simulamos clicando no botão, para poder testar o fluxo sem
+  // integração real de pagamento.
   async function simulateWebhook() {
     setBusy(true)
     setError('')
@@ -91,6 +99,8 @@ export default function PaymentPage() {
     }
   }
 
+  // "tick" não é usado diretamente — ele só existe para forçar o re-render do
+  // countdown a cada segundo (efeito acima). Essa linha evita aviso de "variável não usada".
   void tick
 
   if (error && !order) {

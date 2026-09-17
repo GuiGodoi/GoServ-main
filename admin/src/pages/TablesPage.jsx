@@ -4,6 +4,8 @@ import { api } from '../services/api'
 import { useContentLoading } from '../components/ui'
 import { formatMoney, formatDateTime } from '../utils'
 
+// Cadastro de mesas + gestão manual das sessões (abrir/fechar sessão pela
+// equipe, sem passar pelo fluxo normal de QR + senha do dia).
 export default function TablesPage() {
   const [tables, setTables] = React.useState([])
   const [label, setLabel] = React.useState('')
@@ -46,6 +48,8 @@ export default function TablesPage() {
     setBusy(true)
     try {
       const session = await api.openTableSession(id)
+      // O admin roda na porta 5174 e o client (cardápio) na 5173; troca a
+      // porta na URL atual só para montar um link de teste clicável.
       const full = `${window.location.origin.replace('5174', '5173')}${session.clientPath}`
       setLastLink(full)
       await load()
@@ -68,6 +72,8 @@ export default function TablesPage() {
     }
   }
 
+  // Usa um prompt() simples (em vez de um formulário) para liberar rapidinho
+  // um teto de gastos maior numa sessão que já bateu no limite.
   async function raiseCap(table) {
     const current = table.activeSession?.spendingCap ?? 500
     const raw = prompt(

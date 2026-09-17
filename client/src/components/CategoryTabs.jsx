@@ -1,3 +1,4 @@
+// Abas horizontais para filtrar o cardápio por categoria.
 export default function CategoryTabs({ categories, activeId, onChange }) {
   if (!categories.length) return null
 

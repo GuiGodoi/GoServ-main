@@ -4,12 +4,16 @@ import { connectKitchenHub } from '../services/kitchenHub'
 import { useContentLoading } from '../components/ui'
 import { elapsedLabel } from '../utils'
 
+// Cada coluna do quadro (kanban) representa um status do pedido, na ordem em
+// que ele avança; "next" é para qual status o botão da coluna deve mandar o pedido.
 const COLUMNS = [
   { status: 'Received', title: 'Recebido', next: 'Preparing', nextLabel: 'Iniciar preparo' },
   { status: 'Preparing', title: 'Em preparo', next: 'Ready', nextLabel: 'Marcar como pronto' },
   { status: 'Ready', title: 'Pronto', next: 'Delivered', nextLabel: 'Confirmar entrega' },
 ]
 
+// Painel da cozinha (KDS): quadro em tempo real com os pedidos pagos, um
+// clique avança o status de cada um. Atualiza sozinho via SignalR.
 export default function KitchenPage() {
   const [orders, setOrders] = React.useState([])
   const [error, setError] = React.useState('')
@@ -19,11 +23,15 @@ export default function KitchenPage() {
   const [, setTick] = React.useState(0)
   useContentLoading(booting)
 
+  // Força um re-render a cada 30s só para o "tempo decorrido" (elapsedLabel)
+  // de cada ficha continuar contando, mesmo sem nenhum pedido novo chegando.
   React.useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000)
     return () => clearInterval(id)
   }, [])
 
+  // Insere/atualiza um pedido na lista local. Se ele virou Delivered/Cancelled,
+  // some do quadro (não faz mais sentido ficar visível na cozinha).
   const upsertOrder = React.useCallback((order) => {
     setOrders((prev) => {
       const without = prev.filter((o) => o.id !== order.id)

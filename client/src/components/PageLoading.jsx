@@ -12,6 +12,8 @@ export default function PageLoading({ active }) {
       return
     }
     if (!mounted) return
+    // Em vez de sumir na hora, marca "leaving" (dispara o fade-out via CSS) e só
+    // desmonta o componente depois que a transição (380ms) termina.
     setLeaving(true)
     const t = setTimeout(() => {
       setMounted(false)

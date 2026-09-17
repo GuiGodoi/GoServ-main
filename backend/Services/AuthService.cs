@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Backend.Services
 {
+    /// <summary>Login (gera token JWT) e consulta do usuário logado.</summary>
     public interface IAuthService
     {
         Task<LoginResponseDto?> LoginAsync(LoginRequestDto dto);
@@ -34,6 +35,8 @@ namespace Backend.Services
             if (user is null || !user.Active)
                 return null;
 
+            // BCrypt.Verify compara a senha digitada com o hash salvo no banco
+            // sem nunca precisar "descriptografar" a senha original (hash é uma via só).
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 return null;
 
@@ -65,6 +68,8 @@ namespace Backend.Services
             };
         }
 
+        // Monta e assina o token JWT que o front-end vai mandar em cada requisição
+        // autenticada (no cabeçalho "Authorization: Bearer <token>").
         private string CreateToken(User user, DateTime expiresAt)
         {
             var key = _config["Jwt:Key"]
@@ -72,6 +77,9 @@ namespace Backend.Services
             var issuer = _config["Jwt:Issuer"] ?? "GoServ";
             var audience = _config["Jwt:Audience"] ?? "GoServ";
 
+            // "Claims" são as informações do usuário guardadas dentro do token
+            // (id, e-mail, nome e papel/role), para não precisar consultar o banco
+            // de novo a cada requisição só para saber quem é o usuário.
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -80,6 +88,8 @@ namespace Backend.Services
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
+            // Assina o token com uma chave secreta (Jwt:Key), para o servidor poder
+            // confirmar depois que o token não foi adulterado.
             var credentials = new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
                 SecurityAlgorithms.HmacSha256);

@@ -5,6 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Services
 {
+    /// <summary>
+    /// "Senha do dia": um código de 6 dígitos trocado diariamente, que a equipe
+    /// passa para o cliente usar ao abrir a mesa (evita que qualquer pessoa
+    /// de fora abra uma mesa só sabendo a URL do QR code).
+    /// </summary>
     public interface IDayPasscodeService
     {
         Task<DayPasscode> GetOrCreateTodayAsync();

@@ -1,3 +1,4 @@
+// Página inicial do painel: só um resumo estático do que cada seção faz.
 export default function HomePage() {
   return (
     <section>

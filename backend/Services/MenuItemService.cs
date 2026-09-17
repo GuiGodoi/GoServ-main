@@ -7,6 +7,10 @@ using SixLabors.ImageSharp;
 
 namespace Backend.Services
 {
+    /// <summary>
+    /// Regras de negócio dos produtos do cardápio: validação, foto (upload/conversão)
+    /// e cálculo do preço já considerando promoção ativa.
+    /// </summary>
     public class MenuItemService : IMenuItemService
     {
         private readonly IMenuItemRepository _repository;
@@ -60,6 +64,9 @@ namespace Backend.Services
 
         public async Task<MenuItemDto?> UpdateAsync(int id, UpdateMenuItemDto dto)
         {
+            // Usa o DbContext direto (em vez do repositório) para pegar a entidade
+            // "rastreada" pelo EF Core: assim basta mudar as propriedades e chamar
+            // SaveChangesAsync, sem precisar montar um objeto novo pra dar Update.
             var tracked = await _db.MenuItems.FirstOrDefaultAsync(m => m.Id == id);
             if (tracked is null) return null;
 
@@ -146,6 +153,8 @@ namespace Backend.Services
                 throw new ArgumentException("O preço não pode ser negativo.");
         }
 
+        // Converte o produto (+ promoção ativa, se houver) no DTO que vai para o
+        // front-end, já com o preço "efetivo" calculado (com ou sem desconto).
         private static MenuItemDto ToDto(MenuItem item, Promotion? promo)
         {
             var hasPhoto = !string.IsNullOrEmpty(item.PhotoContentType);

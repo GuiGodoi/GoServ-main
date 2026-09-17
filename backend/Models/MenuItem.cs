@@ -1,5 +1,6 @@
 namespace Backend.Models
 {
+    /// <summary>Um produto do cardápio (lanche, bebida, etc).</summary>
     public class MenuItem
     {
         public int Id { get; set; }

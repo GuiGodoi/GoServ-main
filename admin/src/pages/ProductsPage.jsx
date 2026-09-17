@@ -11,6 +11,8 @@ const emptyForm = {
   available: true,
 }
 
+// CRUD dos produtos do cardápio: formulário (cria ou edita) + upload de foto
+// (com recorte) + tabela com a lista, incluindo alternar disponibilidade rápido.
 export default function ProductsPage() {
   const [items, setItems] = React.useState([])
   const [categories, setCategories] = React.useState([])
@@ -48,6 +50,8 @@ export default function ProductsPage() {
     setForm({
       name: item.name,
       description: item.description || '',
+      // Usa "originalPrice" (preço de tabela) quando existir; "price" sozinho
+      // pode já vir com desconto aplicado se houver uma promoção ativa.
       price: String(item.originalPrice ?? item.price),
       categoryId: item.categoryId == null ? '' : String(item.categoryId),
       available: item.available,
@@ -86,6 +90,8 @@ export default function ProductsPage() {
         const created = await api.createMenuItem(payload)
         id = created.id
       }
+      // O produto precisa existir (ter um id) antes de poder receber a foto,
+      // por isso o upload só acontece depois de criar/salvar os dados de texto.
       if (photoFile && id) {
         await api.uploadMenuItemPhoto(id, photoFile)
       }
@@ -132,6 +138,8 @@ export default function ProductsPage() {
     }
   }
 
+  // Botão de atalho na tabela: reenvia os mesmos dados do produto, só
+  // invertendo o campo "available" (evita abrir o formulário completo pra isso).
   async function toggleAvailable(item) {
     setBusy(true)
     try {

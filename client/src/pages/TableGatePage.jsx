@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { fetchPublicTable, joinTable } from '../services/api'
 import ClientTopBar from '../components/ClientTopBar'
 
+// Tela que abre ao escanear o QR code da mesa: pede nome + senha do dia para
+// liberar a mesa (POST /api/tables/:id/join) antes de ir para o cardápio.
 export default function TableGatePage() {
   const { tableId } = useParams()
   const navigate = useNavigate()
@@ -42,6 +44,8 @@ export default function TableGatePage() {
         guestName,
         dayPasscode,
       })
+      // Guarda uma cópia local (só de conveniência) do nome/token da sessão;
+      // se falhar (ex: navegador privado bloqueando sessionStorage), não é grave.
       try {
         sessionStorage.setItem(
           `goserv_guest_${session.diningTableId}`,
@@ -50,6 +54,8 @@ export default function TableGatePage() {
       } catch {
         /* ignore */
       }
+      // O token da sessão vira a própria URL do cardápio ("/mesa/:token"),
+      // é ele que identifica a mesa em todas as chamadas seguintes.
       navigate(`/mesa/${session.accessToken}`, { replace: true })
     } catch (err) {
       setError(err.message || 'Não foi possível liberar a mesa')

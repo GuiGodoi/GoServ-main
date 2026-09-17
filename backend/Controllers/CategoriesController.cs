@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// CRUD das categorias do cardápio. Leitura (GET) é pública — qualquer
+    /// visitante pode ver o cardápio; criar/editar/excluir exige login de Admin.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CategoriesController : ControllerBase

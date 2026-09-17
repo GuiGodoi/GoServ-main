@@ -1,3 +1,4 @@
+// DTOs do relatório diário (vendas, ticket médio, produtos mais vendidos).
 namespace Backend.Dtos
 {
     public class DailyReportDto

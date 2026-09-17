@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// Rotas de pedido: cliente cria e acompanha (público), admin/cozinha
+    /// listam e mudam status (exige login).
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class OrdersController : ControllerBase
@@ -17,11 +21,13 @@ namespace Backend.Controllers
             _service = service;
         }
 
+        /// <summary>Adicionais disponíveis para um produto específico (tela do cliente montando o pedido).</summary>
         [HttpGet("addons/{menuItemId:int}")]
         [AllowAnonymous]
         public async Task<ActionResult<List<AddonDto>>> GetAddons(int menuItemId) =>
             Ok(await _service.GetAddonsForMenuItemAsync(menuItemId));
 
+        /// <summary>POST /api/orders — cria o pedido (fica "AwaitingPayment" até o Pix ser confirmado).</summary>
         [HttpPost]
         [AllowAnonymous]
         public async Task<ActionResult<OrderDto>> Create(CreateOrderDto dto)
@@ -45,6 +51,7 @@ namespace Backend.Controllers
             return order is null ? NotFound() : Ok(order);
         }
 
+        /// <summary>Consulta pública do pedido pelo Id público (tela do cliente acompanhando o pedido).</summary>
         [HttpGet("public/{publicId:guid}")]
         [AllowAnonymous]
         public async Task<ActionResult<OrderDto>> GetByPublicId(Guid publicId)
@@ -72,11 +79,13 @@ namespace Backend.Controllers
             }
         }
 
+        /// <summary>Lista de pedidos para o painel (cozinha/admin), opcionalmente filtrada por status.</summary>
         [HttpGet]
         [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Kitchen}")]
         public async Task<ActionResult<List<OrderDto>>> GetAll([FromQuery] string? status = null) =>
             Ok(await _service.GetAllAsync(status));
 
+        /// <summary>Avança o status do pedido (ex: Received -> Preparing -> Ready -> Delivered).</summary>
         [HttpPatch("{id:int}/status")]
         [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Kitchen}")]
         public async Task<ActionResult<OrderDto>> UpdateStatus(int id, UpdateOrderStatusDto dto)

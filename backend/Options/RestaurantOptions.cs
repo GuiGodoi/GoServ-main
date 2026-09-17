@@ -1,5 +1,6 @@
 namespace Backend.Options
 {
+    /// <summary>Configurações gerais do estabelecimento, vindas da seção "Restaurant" do appsettings.json.</summary>
     public class RestaurantOptions
     {
         public const string SectionName = "Restaurant";

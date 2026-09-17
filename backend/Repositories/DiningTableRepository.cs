@@ -26,6 +26,8 @@ namespace Backend.Repositories
             return table;
         }
 
+        // "Aberta" = ainda não foi fechada manualmente (ClosedAt == null) e ainda
+        // não passou do prazo (ExpiresAt no futuro).
         public Task<TableSession?> GetOpenSessionByTableIdAsync(int tableId)
         {
             var now = DateTime.UtcNow;
@@ -60,6 +62,9 @@ namespace Backend.Repositories
             await _db.SaveChangesAsync();
         }
 
+        // Fecha todas as sessões em aberto de uma mesa de uma vez (mesmo que, na
+        // prática, só devesse existir uma). Usado antes de abrir uma sessão nova,
+        // para nunca ter duas sessões ativas na mesma mesa ao mesmo tempo.
         public async Task CloseOpenSessionsAsync(int tableId)
         {
             var now = DateTime.UtcNow;

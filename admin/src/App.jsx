@@ -23,6 +23,9 @@ import ReportsPage from './pages/ReportsPage'
 import QrCodesPage from './pages/QrCodesPage'
 import PromotionsPage from './pages/PromotionsPage'
 
+// Layout com barra lateral + área de conteúdo, usado em todas as páginas
+// depois do login. Cada link do menu só aparece se o usuário logado tiver o
+// papel (role) necessário — "Admin" vê tudo, "Kitchen" só cozinha/mesas/QR.
 function Shell() {
   const { user, logout } = useAuth()
   const location = useLocation()
@@ -36,6 +39,8 @@ function Shell() {
     setNavOpen(false)
   }, [location.pathname])
 
+  // Mostra a barra de "carregando" por um tempo mínimo a cada troca de página,
+  // só para dar um feedback visual mesmo em navegações muito rápidas.
   React.useEffect(() => {
     setNavLoading(true)
     const t = setTimeout(() => setNavLoading(false), 420)
@@ -274,6 +279,8 @@ function Shell() {
   )
 }
 
+// Raiz do app: só duas rotas de "primeiro nível" — login (pública) e tudo o
+// resto, que passa pelo ProtectedRoute (exige estar logado) antes de chegar no Shell.
 export default function App() {
   return (
     <AuthProvider>

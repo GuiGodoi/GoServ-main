@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Backend.Controllers
 {
+    /// <summary>Dados públicos do estabelecimento (nome, tempo de expiração do Pix, URL do client).</summary>
     [ApiController]
     [Route("api/[controller]")]
     public class RestaurantController : ControllerBase

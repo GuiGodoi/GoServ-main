@@ -1,3 +1,4 @@
+// DTOs de promoções (desconto temporário sobre um produto do cardápio).
 namespace Backend.Dtos
 {
     public class PromotionDto
@@ -11,6 +12,7 @@ namespace Backend.Dtos
         public DateTime StartsAt { get; set; }
         public DateTime EndsAt { get; set; }
         public bool Active { get; set; }
+        /// <summary>True se a promoção está dentro do período e marcada como ativa agora mesmo.</summary>
         public bool IsLive { get; set; }
     }
 

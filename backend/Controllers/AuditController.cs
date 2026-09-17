@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers
 {
+    /// <summary>Consulta o histórico de auditoria (só admin pode ver).</summary>
     [ApiController]
     [Route("api/audit")]
     [Authorize(Roles = UserRoles.Admin)]
@@ -18,6 +19,7 @@ namespace Backend.Controllers
             _audit = audit;
         }
 
+        /// <summary>GET /api/audit?take=50 — últimos registros de auditoria (limitado a 200 por vez).</summary>
         [HttpGet]
         public async Task<ActionResult<List<AuditLogDto>>> GetRecent([FromQuery] int take = 50)
         {

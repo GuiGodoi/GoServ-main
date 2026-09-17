@@ -4,6 +4,8 @@ import { useContentLoading } from '../components/ui'
 
 const emptyForm = { name: '', sortOrder: 0 }
 
+// CRUD simples de categorias: um formulário (cria ou edita, dependendo de
+// "editingId") + uma tabela com a lista atual.
 export default function CategoriesPage() {
   const [items, setItems] = React.useState([])
   const [form, setForm] = React.useState(emptyForm)

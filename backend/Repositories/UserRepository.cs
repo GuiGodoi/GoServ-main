@@ -13,6 +13,8 @@ namespace Backend.Repositories
             _db = db;
         }
 
+        // E-mails são sempre salvos em minúsculo, então convertemos aqui para a
+        // busca funcionar independente de como o e-mail foi digitado.
         public Task<User?> GetByEmailAsync(string email) =>
             _db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLower());
 

@@ -1,5 +1,10 @@
+// Camada única de acesso à API do backend: todas as chamadas HTTP do site do
+// cliente (cardápio) passam por aqui, então as telas não repetem fetch/erro.
 const API = '/api'
 
+// Faz a chamada HTTP e já trata os casos comuns: monta a URL, manda JSON,
+// devolve null em respostas "sem conteúdo" (204) e transforma erro HTTP em
+// exceção JS com a mensagem que o backend mandou.
 async function request(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     headers: {

@@ -11,6 +11,8 @@ const empty = {
   active: true,
 }
 
+// CRUD de promoções: formulário (cria ou edita) + tabela com o desconto e o
+// status (no ar / agendada-expirada / inativa) de cada promoção.
 export default function PromotionsPage() {
   const [promos, setPromos] = React.useState([])
   const [items, setItems] = React.useState([])
@@ -75,6 +77,8 @@ export default function PromotionsPage() {
         active: form.active,
       }
       if (editingId) {
+        // A API de edição não permite trocar o produto da promoção (só criar
+        // uma nova para outro produto), então o menuItemId é descartado aqui.
         const { menuItemId: _, ...update } = payload
         await api.updatePromotion(editingId, update)
       } else {

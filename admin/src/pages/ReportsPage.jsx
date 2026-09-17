@@ -3,6 +3,8 @@ import { api } from '../services/api'
 import { useContentLoading } from '../components/ui'
 import { formatPrice, todayInputValue, formatDayLabel } from '../utils'
 
+// Dashboard simples do dia atual: vendas, ticket médio e um gráfico de
+// barras (feito na mão com <div>s) dos produtos mais vendidos.
 export default function ReportsPage() {
   const date = todayInputValue()
   const [report, setReport] = React.useState(null)
@@ -33,6 +35,8 @@ export default function ReportsPage() {
     }
   }, [date])
 
+  // Maior quantidade vendida entre os itens, usada para calcular a altura
+  // proporcional (%) de cada barra do gráfico.
   const maxQty = report?.topItems?.length
     ? Math.max(...report.topItems.map((i) => i.quantitySold), 1)
     : 1
