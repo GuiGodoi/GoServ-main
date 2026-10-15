@@ -1,30 +1,42 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
-import { useContentLoading } from '../components/ui'
+import { useAuth } from '../auth/AuthContext'
+import {
+  Alert,
+  EmptyState,
+  Icon,
+  PageHeader,
+  useContentLoading,
+  useToast,
+  useDialog,
+} from '../components/ui'
 import { formatMoney, formatDateTime } from '../utils'
+import './TablesPage.css'
 
 // Cadastro de mesas + gestão manual das sessões (abrir/fechar sessão pela
 // equipe, sem passar pelo fluxo normal de QR + senha do dia).
 export default function TablesPage() {
+  const toast = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'Admin'
   const [tables, setTables] = React.useState([])
   const [label, setLabel] = React.useState('')
-  const [error, setError] = React.useState('')
   const [busy, setBusy] = React.useState(false)
   const [lastLink, setLastLink] = React.useState('')
   const [booting, setBooting] = React.useState(true)
+  const dialog = useDialog()
   useContentLoading(booting)
 
   const load = React.useCallback(async () => {
     try {
-      setError('')
       setTables(await api.getTables())
     } catch (e) {
-      setError(e.message)
+      toast.error(e)
     } finally {
       setBooting(false)
     }
-  }, [])
+  }, [toast])
 
   React.useEffect(() => {
     load()
@@ -38,7 +50,7 @@ export default function TablesPage() {
       setLabel('')
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
@@ -54,7 +66,7 @@ export default function TablesPage() {
       setLastLink(full)
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
@@ -66,24 +78,30 @@ export default function TablesPage() {
       await api.closeTableSession(id)
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
   }
 
-  // Usa um prompt() simples (em vez de um formulário) para liberar rapidinho
-  // um teto de gastos maior numa sessão que já bateu no limite.
+  // Abre um diálogo rápido (em vez de um formulário) para liberar um teto de
+  // gastos maior numa sessão que já bateu no limite.
   async function raiseCap(table) {
     const current = table.activeSession?.spendingCap ?? 500
-    const raw = prompt(
-      `Novo teto de gastos para ${table.label} (atual R$ ${Number(current).toFixed(2)}):`,
-      String(Number(current) + 200)
-    )
+    const raw = await dialog.prompt({
+      title: `Liberar teto · ${table.label}`,
+      message: `Teto atual: ${formatMoney(current)}. Informe o novo valor máximo de consumo da sessão.`,
+      inputLabel: 'Novo teto (R$)',
+      inputMode: 'decimal',
+      icon: 'wallet',
+      defaultValue: String(Number(current) + 200),
+      confirmLabel: 'Liberar',
+    })
+
     if (raw == null) return
     const value = Number(raw.replace(',', '.'))
     if (Number.isNaN(value) || value < 0) {
-      setError('Valor inválido')
+      toast.error('Informe um número maior ou igual a zero.', { title: 'Valor inválido' })
       return
     }
     setBusy(true)
@@ -91,174 +109,163 @@ export default function TablesPage() {
       await api.raiseSessionCap(table.id, value)
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
   }
 
+  const openCount = tables.filter((t) => t.activeSession).length
+
   return (
     <section className="page">
-      <header>
-        <h1>Mesas</h1>
-        <p>
-          Cadastre mesas aqui. Os QR codes fixos ficam em{' '}
-          <Link to="/qrcodes">QR Codes</Link> (entrada com nome + senha do dia).
-        </p>
-      </header>
+      <PageHeader
+        title="Mesas"
+        description={
+          <>
+            Cadastre mesas e acompanhe as sessões abertas. Os QR codes fixos ficam
+            em <Link to="/qrcodes">QR Codes</Link> (entrada com nome + senha do dia).
+          </>
+        }
+      />
 
-      {error && <p className="error">{error}</p>}
       {lastLink && (
-        <p className="link-box">
-          Link do cliente:{' '}
+        <Alert tone="success" onClose={() => setLastLink('')}>
+          Sessão aberta. Link do cliente:{' '}
           <a href={lastLink} target="_blank" rel="noreferrer">
             {lastLink}
           </a>
-        </p>
+        </Alert>
       )}
 
-      <form className="panel" onSubmit={handleCreate}>
-        <h2>Nova mesa</h2>
-        <label>
-          Identificador
-          <input
-            required
-            placeholder="Mesa 5"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        </label>
-        <button type="submit" disabled={busy}>
-          Cadastrar
-        </button>
-      </form>
+      <div className="card">
+        <div className="card-header tables-header">
+          <h2>
+            Mesas <span className="count">{tables.length}</span>
+            {openCount > 0 && <span className="badge success">{openCount} {openCount === 1 ? 'aberta' : 'abertas'}</span>}
+          </h2>
+          {/* Só o Admin pode cadastrar mesas (POST /tables); a Cozinha só gerencia sessões. */}
+          {isAdmin && (
+            <form className="inline-form" onSubmit={handleCreate}>
+              <input
+                className="input"
+                required
+                placeholder="Ex.: Mesa 5"
+                aria-label="Identificador da nova mesa"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+              <button type="submit" className="btn" disabled={busy}>
+                <Icon name="plus" size={16} />
+                Adicionar
+              </button>
+            </form>
+          )}
+        </div>
 
-      <div className="panel">
-        <h2>Lista</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Mesa</th>
-              <th>Sessão / consumo</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {tables.map((table) => (
-              <tr key={table.id}>
-                <td>{table.label}</td>
-                <td>
-                  {table.activeSession ? (
-                    <span className="on">
-                      Aberta até{' '}
-                      {formatDateTime(table.activeSession.expiresAt)}
-                      <br />
-                      {formatMoney(table.activeSession.spent)} /{' '}
-                      {formatMoney(table.activeSession.spendingCap)} ·{' '}
-                      {table.activeSession.orderCount} pedidos
-                    </span>
-                  ) : (
-                    <span className="off">Fechada</span>
-                  )}
-                </td>
-                <td className="row-actions">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => openSession(table.id)}
-                  >
-                    Abrir sessão
-                  </button>
-                  {table.activeSession && (
-                    <>
-                      <button
-                        type="button"
-                        className="ghost"
-                        disabled={busy}
-                        onClick={() => raiseCap(table)}
-                      >
-                        Liberar teto
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost"
-                        disabled={busy}
-                        onClick={() => closeSession(table.id)}
-                      >
-                        Fechar
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {tables.length === 0 ? (
+          <EmptyState icon="table" title="Nenhuma mesa cadastrada">
+            {isAdmin
+              ? 'Adicione a primeira mesa no campo acima.'
+              : 'Peça a um administrador para cadastrar as mesas.'}
+          </EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Mesa</th>
+                  <th>Status</th>
+                  <th>Consumo</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {tables.map((table) => {
+                  const s = table.activeSession
+                  const pct = s && s.spendingCap > 0
+                    ? Math.min(100, (Number(s.spent) / Number(s.spendingCap)) * 100)
+                    : 0
+                  return (
+                    <tr key={table.id}>
+                      <td>
+                        <div className="with-thumb">
+                          <span className={`thumb table-icon ${s ? 'on' : ''}`}>
+                            <Icon name="table" size={18} />
+                          </span>
+                          <strong>{table.label}</strong>
+                        </div>
+                      </td>
+                      <td>
+                        {s ? (
+                          <>
+                            <span className="badge success">Aberta</span>
+                            <span className="sub">até {formatDateTime(s.expiresAt)}</span>
+                          </>
+                        ) : (
+                          <span className="badge">Livre</span>
+                        )}
+                      </td>
+                      <td>
+                        {s ? (
+                          <div className="spend">
+                            <div className="spend-line">
+                              <span className="num">
+                                <strong>{formatMoney(s.spent)}</strong>
+                                <span className="muted"> / {formatMoney(s.spendingCap)}</span>
+                              </span>
+                              <span className="muted">
+                                {s.orderCount} {s.orderCount === 1 ? 'pedido' : 'pedidos'}
+                              </span>
+                            </div>
+                            <div className={`meter ${pct >= 90 ? 'hot' : pct >= 70 ? 'warm' : ''}`}>
+                              <i style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                      <td className="actions-cell">
+                        <div className="row-actions">
+                          {s && (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                disabled={busy}
+                                onClick={() => raiseCap(table)}
+                              >
+                                Liberar teto
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                disabled={busy}
+                                onClick={() => closeSession(table.id)}
+                              >
+                                Fechar
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            disabled={busy}
+                            onClick={() => openSession(table.id)}
+                          >
+                            Abrir sessão
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      <style>{`
-        .page h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
-        .page > header p { margin: 0 0 1.25rem; color: var(--muted); }
-        .error { color: var(--danger); }
-        .link-box {
-          background: rgba(31, 107, 74, 0.1);
-          border: 1px solid rgba(31, 107, 74, 0.25);
-          padding: 0.75rem 1rem;
-          border-radius: 8px;
-          word-break: break-all;
-          font-size: 0.9rem;
-        }
-        .link-box a { color: var(--accent); font-weight: 600; }
-        .panel {
-          background: var(--panel);
-          border: 1px solid var(--line);
-          border-radius: var(--radius);
-          padding: 1rem 1.1rem;
-          margin-bottom: 1rem;
-        }
-        .panel h2 { margin: 0 0 0.85rem; font-size: 1rem; }
-        label {
-          display: flex;
-          flex-direction: column;
-          gap: 0.3rem;
-          margin-bottom: 0.75rem;
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-        input {
-          border: 1px solid var(--line);
-          border-radius: 8px;
-          padding: 0.55rem 0.65rem;
-          background: #fff;
-          max-width: 280px;
-        }
-        .page button {
-          border: none;
-          background: var(--accent);
-          color: #fff;
-          padding: 0.5rem 0.9rem;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .page button:disabled { opacity: 0.6; }
-        .page button.ghost {
-          background: transparent;
-          color: var(--ink);
-          border: 1px solid var(--line);
-        }
-        table { width: 100%; border-collapse: collapse; }
-        th, td {
-          text-align: left;
-          padding: 0.55rem 0.35rem;
-          border-bottom: 1px solid var(--line);
-          font-size: 0.9rem;
-        }
-        th { color: var(--muted); font-weight: 500; }
-        .row-actions { text-align: right; white-space: nowrap; display: flex; gap: 0.4rem; justify-content: flex-end; }
-        .on { color: var(--accent); font-weight: 500; font-size: 0.85rem; }
-        .off { color: var(--muted); font-size: 0.85rem; }
-      `}</style>
     </section>
   )
 }

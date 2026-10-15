@@ -1,0 +1,141 @@
+.qr-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+/* Senha do dia */
+.passcode-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.4rem 1.5rem;
+  border-radius: var(--radius-lg);
+  color: var(--sidebar-ink);
+  background:
+    radial-gradient(ellipse 70% 80% at 100% 0%, rgba(47, 148, 103, 0.35), transparent 60%),
+    var(--sidebar);
+  box-shadow: var(--shadow);
+}
+.passcode-head { display: flex; align-items: center; gap: 0.6rem; }
+.passcode-head .eyebrow { color: var(--sidebar-muted); }
+.passcode-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #5fd09c;
+}
+.passcode {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.passcode span {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 3.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--mono);
+  font-size: 1.9rem;
+  font-weight: 500;
+  color: #fff;
+}
+.passcode-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.passcode-foot p { font-size: 0.85rem; color: var(--sidebar-muted); }
+.passcode-btn { background: rgba(255, 255, 255, 0.1); }
+.passcode-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* Cards de QR */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.section-title h2 { font-size: 1.05rem; font-weight: 600; }
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.qr-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.qr-card:hover { box-shadow: 0 2px 4px rgba(28, 25, 21, 0.05), 0 10px 28px rgba(28, 25, 21, 0.08); }
+.qr-frame {
+  display: grid;
+  place-items: center;
+  padding: 1.1rem;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+.qr-frame img,
+.qr-ph {
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.qr-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem 1rem;
+  min-width: 0;
+}
+.qr-meta h3 { font-size: 1.05rem; font-weight: 600; }
+.qr-url {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qr-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+.qr-actions .btn { margin-right: auto; }
+
+/* QR do cardápio ao lado da senha: layout horizontal */
+.qr-card.featured { flex-direction: row; }
+.qr-card.featured .qr-frame { border-bottom: none; border-right: 1px solid var(--line); }
+.qr-card.featured .qr-frame img,
+.qr-card.featured .qr-ph { width: 132px; }
+.qr-card.featured .qr-meta { flex: 1; justify-content: center; }
+
+@media (max-width: 860px) {
+  .qr-top { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .qr-card.featured { flex-direction: column; }
+  .qr-card.featured .qr-frame { border-right: none; border-bottom: 1px solid var(--line); }
+  .passcode span { width: 2.4rem; height: 3rem; font-size: 1.5rem; }
+}

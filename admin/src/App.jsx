@@ -12,6 +12,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import {
   PageLoading,
   ContentLoadingProvider,
+  DialogProvider,
+  Icon,
+  ToastProvider,
 } from './components/ui'
 import ProductsPage from './pages/ProductsPage'
 import CategoriesPage from './pages/CategoriesPage'
@@ -22,6 +25,37 @@ import KitchenPage from './pages/KitchenPage'
 import ReportsPage from './pages/ReportsPage'
 import QrCodesPage from './pages/QrCodesPage'
 import PromotionsPage from './pages/PromotionsPage'
+import './App.css'
+
+// Itens do menu lateral, agrupados por seção. "admin: true" = só aparece
+// para o papel Admin; o papel Kitchen vê só cozinha/mesas/QR.
+const NAV_SECTIONS = [
+  {
+    title: 'Operação',
+    items: [
+      { to: '/cozinha', label: 'Cozinha', icon: 'flame' },
+      { to: '/mesas', label: 'Mesas', icon: 'table' },
+      { to: '/qrcodes', label: 'QR Codes', icon: 'qr' },
+    ],
+  },
+  {
+    title: 'Cardápio',
+    items: [
+      { to: '/produtos', label: 'Produtos', icon: 'package', admin: true },
+      { to: '/categorias', label: 'Categorias', icon: 'layers', admin: true },
+      { to: '/promocoes', label: 'Promoções', icon: 'tag', admin: true },
+    ],
+  },
+  {
+    title: 'Gestão',
+    items: [{ to: '/relatorios', label: 'Relatórios', icon: 'chart', admin: true }],
+  },
+]
+
+function initials(name = '') {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return ((parts[0]?.[0] || '?') + (parts[1]?.[0] || '')).toUpperCase()
+}
 
 // Layout com barra lateral + área de conteúdo, usado em todas as páginas
 // depois do login. Cada link do menu só aparece se o usuário logado tiver o
@@ -51,44 +85,74 @@ function Shell() {
 
   return (
     <div className={`shell ${navOpen ? 'nav-open' : ''}`}>
-      <button
-        type="button"
-        className="nav-toggle"
-        aria-label="Menu"
-        onClick={() => setNavOpen((v) => !v)}
-      >
-        {navOpen ? 'Fechar' : 'Menu'}
-      </button>
+      <header className="mobile-bar">
+        <span className="brand-mark">
+          <Icon name="utensils" size={16} />
+        </span>
+        <strong>GoServ</strong>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label={navOpen ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={navOpen}
+          onClick={() => setNavOpen((v) => !v)}
+        >
+          <Icon name={navOpen ? 'x' : 'menu'} size={20} />
+        </button>
+      </header>
+
+      <div className="scrim" onClick={() => setNavOpen(false)} />
 
       <aside className="sidebar">
         <div className="brand">
-          <span className="logo">GoServ</span>
-          <span className="badge">{user?.role === 'Kitchen' ? 'Cozinha' : 'Admin'}</span>
+          <span className="brand-mark">
+            <Icon name="utensils" size={18} />
+          </span>
+          <div>
+            <span className="logo">GoServ</span>
+            <span className="brand-sub">
+              {user?.role === 'Kitchen' ? 'Painel da cozinha' : 'Painel administrativo'}
+            </span>
+          </div>
         </div>
+
         <nav>
-          {isAdmin && <NavLink to="/produtos">Produtos</NavLink>}
-          {isAdmin && <NavLink to="/promocoes">Promoções</NavLink>}
-          {isAdmin && <NavLink to="/categorias">Categorias</NavLink>}
-          <NavLink to="/mesas">Mesas</NavLink>
-          <NavLink to="/qrcodes">QR Codes</NavLink>
-          {isAdmin && <NavLink to="/relatorios">Relatórios</NavLink>}
-          <NavLink to="/cozinha">Cozinha</NavLink>
-          <NavLink to="/" end>
+          <NavLink to="/" end className="nav-link">
+            <Icon name="home" />
             Início
           </NavLink>
+          {NAV_SECTIONS.map((section) => {
+            const items = section.items.filter((i) => !i.admin || isAdmin)
+            if (items.length === 0) return null
+            return (
+              <div key={section.title} className="nav-section">
+                <span className="nav-title">{section.title}</span>
+                {items.map((item) => (
+                  <NavLink key={item.to} to={item.to} className="nav-link">
+                    <Icon name={item.icon} />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
         </nav>
+
         <div className="user-box">
-          <strong>{user?.name}</strong>
-          <span>{user?.role}</span>
-          <button type="button" className="logout" onClick={logout}>
-            Sair
+          <span className="avatar">{initials(user?.name)}</span>
+          <div className="who">
+            <strong>{user?.name}</strong>
+            <span>{user?.role === 'Kitchen' ? 'Cozinha' : 'Administrador'}</span>
+          </div>
+          <button type="button" className="logout" onClick={logout} aria-label="Sair" title="Sair">
+            <Icon name="logout" />
           </button>
         </div>
       </aside>
 
       <main className={`main-pane ${wide ? 'wide' : ''}`}>
         <PageLoading active={loading} />
-        <div className={wide ? 'content wide' : 'content'}>
+        <div className="content">
           <ContentLoadingProvider setPageLoading={setPageLoading}>
             <Routes>
               <Route path="/" element={<HomePage />} />
@@ -153,128 +217,6 @@ function Shell() {
           </ContentLoadingProvider>
         </div>
       </main>
-
-      <style>{`
-        .shell {
-          display: grid;
-          grid-template-columns: 220px 1fr;
-          min-height: 100vh;
-        }
-        .nav-toggle {
-          display: none;
-          position: sticky;
-          top: 0;
-          z-index: 30;
-          width: 100%;
-          border: none;
-          border-bottom: 1px solid var(--line);
-          background: var(--panel);
-          padding: 0.75rem 1rem;
-          font-weight: 700;
-          text-align: left;
-          cursor: pointer;
-        }
-        .sidebar {
-          padding: 1.5rem 1.1rem;
-          border-right: 1px solid var(--line);
-          background: var(--panel);
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-        .brand {
-          display: flex;
-          align-items: baseline;
-          gap: 0.5rem;
-        }
-        .logo {
-          font-weight: 700;
-          font-size: 1.35rem;
-          letter-spacing: -0.02em;
-        }
-        .badge {
-          font-family: var(--mono);
-          font-size: 0.7rem;
-          text-transform: uppercase;
-          color: var(--accent);
-          background: rgba(31, 107, 74, 0.1);
-          padding: 0.15rem 0.4rem;
-          border-radius: 4px;
-        }
-        nav {
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-        nav a {
-          padding: 0.55rem 0.7rem;
-          border-radius: 8px;
-          color: var(--muted);
-          font-weight: 500;
-        }
-        nav a:hover { background: var(--bg); color: var(--ink); }
-        nav a.active {
-          background: rgba(31, 107, 74, 0.12);
-          color: var(--accent);
-        }
-        .user-box {
-          margin-top: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 0.2rem;
-          font-size: 0.85rem;
-          color: var(--ink);
-        }
-        .user-box strong { color: var(--ink); }
-        .user-box span { color: var(--muted); }
-        .sidebar .logout,
-        button.logout {
-          margin-top: 0.5rem;
-          align-self: flex-start;
-          border: 1px solid var(--line) !important;
-          background: #fff !important;
-          color: var(--ink) !important;
-          padding: 0.4rem 0.75rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 0.85rem;
-        }
-        .sidebar .logout:hover {
-          background: var(--bg) !important;
-        }
-        .main-pane {
-          position: relative;
-          min-height: 100vh;
-          min-width: 0;
-          background: var(--bg);
-        }
-        .content {
-          padding: 1.75rem 1.5rem 3rem;
-          max-width: 960px;
-        }
-        .content.wide,
-        .main-pane.wide .content {
-          max-width: 1200px;
-        }
-        @media (max-width: 760px) {
-          .shell { grid-template-columns: 1fr; }
-          .nav-toggle { display: block; }
-          .sidebar {
-            display: none;
-            border-right: none;
-            border-bottom: 1px solid var(--line);
-            padding-top: 0.75rem;
-          }
-          .shell.nav-open .sidebar { display: flex; }
-          nav { flex-direction: row; flex-wrap: wrap; }
-          .main-pane { min-height: calc(100vh - 48px); }
-          .content {
-            padding: 1rem 1rem 2.5rem;
-            max-width: none;
-          }
-        }
-      `}</style>
     </div>
   )
 }
@@ -283,20 +225,24 @@ function Shell() {
 // resto, que passa pelo ProtectedRoute (exige estar logado) antes de chegar no Shell.
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Shell />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <DialogProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Shell />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </DialogProvider>
+      </AuthProvider>
+    </ToastProvider>
   )
 }

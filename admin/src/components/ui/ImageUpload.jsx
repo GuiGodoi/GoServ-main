@@ -1,5 +1,6 @@
 import React from 'react'
 import ImageCropModal from './ImageCropModal'
+import Icon from './Icon'
 
 /**
  * Upload 1:1 com modal de recorte (react-easy-crop): zoom, pan e rotação.
@@ -10,7 +11,7 @@ export default function ImageUpload({
   onFileChange,
   onClear,
   accept = 'image/jpeg,image/png,image/webp,image/gif',
-  hint = 'JPEG/PNG/WebP · máx. 5 MB · recorte 1:1',
+  hint = 'JPEG, PNG ou WebP · até 5 MB',
   disabled = false,
 }) {
   const inputRef = React.useRef(null)
@@ -37,49 +38,53 @@ export default function ImageUpload({
 
   return (
     <div className="ui-upload">
-      {label && <span className="lbl">{label}</span>}
-      <div className="row">
-        <div className={`frame ${previewUrl ? 'has' : ''}`}>
-          {previewUrl ? (
+      {label && <span className="field-label">{label}</span>}
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        accept={accept}
+        hidden
+        disabled={disabled}
+        onChange={handlePick}
+      />
+      <button
+        type="button"
+        className={`frame ${previewUrl ? 'has' : ''}`}
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+        aria-label={previewUrl ? 'Trocar foto' : 'Selecionar foto'}
+      >
+        {previewUrl ? (
+          <>
             <img src={previewUrl} alt="Prévia" />
-          ) : (
-            <span className="empty">1:1</span>
-          )}
-        </div>
-        <div className="btns">
-          <input
-            ref={inputRef}
-            id={inputId}
-            type="file"
-            accept={accept}
-            hidden
-            disabled={disabled}
-            onChange={handlePick}
-          />
-          <button
-            type="button"
-            className="primary"
-            disabled={disabled}
-            onClick={() => inputRef.current?.click()}
-          >
-            {previewUrl ? 'Trocar foto' : 'Selecionar foto'}
-          </button>
-          {previewUrl && (
-            <button
-              type="button"
-              className="ghost"
-              disabled={disabled}
-              onClick={() => {
-                if (inputRef.current) inputRef.current.value = ''
-                onClear?.()
-              }}
-            >
-              Remover
-            </button>
-          )}
-          {hint && <p className="hint">{hint}</p>}
-        </div>
-      </div>
+            <span className="frame-overlay">
+              <Icon name="image" size={18} />
+              Trocar
+            </span>
+          </>
+        ) : (
+          <span className="empty">
+            <Icon name="image" size={24} />
+            <span>Adicionar foto</span>
+          </span>
+        )}
+      </button>
+      {previewUrl && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm remove"
+          disabled={disabled}
+          onClick={() => {
+            if (inputRef.current) inputRef.current.value = ''
+            onClear?.()
+          }}
+        >
+          <Icon name="trash" size={14} />
+          Remover foto
+        </button>
+      )}
+      {hint && <p className="hint">{hint}</p>}
 
       {rawSrc && (
         <ImageCropModal
@@ -94,74 +99,65 @@ export default function ImageUpload({
           display: flex;
           flex-direction: column;
           gap: 0.45rem;
-        }
-        .ui-upload .lbl {
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-        .ui-upload .row {
-          display: flex;
-          gap: 0.85rem;
-          align-items: center;
-          flex-wrap: wrap;
+          align-items: flex-start;
         }
         .ui-upload .frame {
-          width: 112px;
-          height: 112px;
+          position: relative;
+          width: 168px;
+          max-width: 100%;
           aspect-ratio: 1 / 1;
-          border: 1px dashed var(--line);
-          border-radius: 10px;
-          background: var(--bg);
+          padding: 0;
+          border: 1.5px dashed var(--line-strong);
+          border-radius: var(--radius);
+          background: var(--panel-2);
           overflow: hidden;
           display: grid;
           place-items: center;
-          flex: none;
+          cursor: pointer;
+          transition: border-color 0.15s ease, background 0.15s ease;
         }
-        .ui-upload .frame.has { border-style: solid; }
+        .ui-upload .frame:hover:not(:disabled) {
+          border-color: var(--accent);
+          background: var(--accent-soft);
+        }
+        .ui-upload .frame:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px var(--accent-ring);
+        }
+        .ui-upload .frame.has { border-style: solid; border-color: var(--line); }
         .ui-upload .frame img {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
-        .ui-upload .empty {
-          font-family: var(--mono);
-          font-size: 0.75rem;
-          color: var(--muted);
-        }
-        .ui-upload .btns {
+        .ui-upload .frame-overlay {
+          position: absolute;
+          inset: 0;
           display: flex;
           flex-direction: column;
-          gap: 0.45rem;
-          align-items: flex-start;
-        }
-        .ui-upload .primary {
-          border: none;
-          background: var(--accent);
+          align-items: center;
+          justify-content: center;
+          gap: 0.3rem;
           color: #fff;
-          padding: 0.5rem 0.85rem;
-          border-radius: 8px;
+          font-size: 0.82rem;
           font-weight: 600;
-          cursor: pointer;
+          background: rgba(28, 25, 21, 0.5);
+          opacity: 0;
+          transition: opacity 0.15s ease;
         }
-        .ui-upload .ghost {
-          border: 1px solid var(--line);
-          background: #fff;
-          color: var(--ink);
-          padding: 0.45rem 0.75rem;
-          border-radius: 8px;
-          font-weight: 500;
-          cursor: pointer;
-        }
-        .ui-upload .hint {
-          margin: 0;
-          font-size: 0.75rem;
+        .ui-upload .frame:hover .frame-overlay { opacity: 1; }
+        .ui-upload .empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.4rem;
           color: var(--muted);
-          max-width: 28ch;
+          font-size: 0.8rem;
+          font-weight: 500;
         }
-        .ui-upload button:disabled {
-          opacity: 0.55;
-          cursor: wait;
-        }
+        .ui-upload .remove { color: var(--danger); padding-left: 0.4rem; }
+        .ui-upload .hint { margin: 0; max-width: 168px; }
+        .ui-upload .frame:disabled { opacity: 0.6; cursor: wait; }
       `}</style>
     </div>
   )

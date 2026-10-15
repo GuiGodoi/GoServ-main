@@ -1,0 +1,17 @@
+.product-form {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.table .clamp {
+  max-width: 42ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .product-form { grid-template-columns: 1fr; }
+}

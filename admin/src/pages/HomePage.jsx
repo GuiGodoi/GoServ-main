@@ -1,47 +1,99 @@
-// Página inicial do painel: só um resumo estático do que cada seção faz.
-export default function HomePage() {
-  return (
-    <section>
-      <h1>Painel do estabelecimento</h1>
-      <p>
-        Cadastre o cardápio, gerencie mesas e QR codes, acompanhe a cozinha e
-        veja o desempenho do dia.
-      </p>
-      <ul>
-        <li>
-          <strong>QR Codes</strong> — cardápio (consulta) e mesas; senha do dia
-        </li>
-        <li>
-          <strong>Cozinha</strong> — pedidos ao vivo (SignalR), avanço de status
-        </li>
-        <li>
-          <strong>Produtos / Categorias</strong> — gestão do cardápio (Admin)
-        </li>
-        <li>
-          <strong>Relatórios</strong> — vendas, ticket médio e mais vendidos
-        </li>
-        <li>
-          <strong>Mesas</strong> — cadastro; entrada do cliente via QR + senha
-        </li>
-      </ul>
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import { api } from '../services/api'
+import { Icon } from '../components/ui'
+import { formatMoney, todayInputValue } from '../utils'
+import './HomePage.css'
 
-      <style>{`
-        h1 {
-          margin: 0 0 0.5rem;
-          font-size: 1.6rem;
-          letter-spacing: -0.02em;
-        }
-        p, li {
-          color: var(--muted);
-          line-height: 1.5;
-        }
-        ul {
-          margin: 1.25rem 0 0;
-          padding-left: 1.1rem;
-        }
-        li { margin-bottom: 0.5rem; }
-        strong { color: var(--ink); }
-      `}</style>
+// Atalhos para cada seção. "admin: true" = só aparece para o papel Admin.
+const SHORTCUTS = [
+  { to: '/cozinha', icon: 'flame', title: 'Cozinha', text: 'Pedidos ao vivo e avanço de status.' },
+  { to: '/mesas', icon: 'table', title: 'Mesas', text: 'Sessões abertas, consumo e teto de gastos.' },
+  { to: '/qrcodes', icon: 'qr', title: 'QR Codes', text: 'Códigos para imprimir e senha do dia.' },
+  { to: '/produtos', icon: 'package', title: 'Produtos', text: 'Itens do cardápio, fotos e preços.', admin: true },
+  { to: '/promocoes', icon: 'tag', title: 'Promoções', text: 'Descontos com período definido.', admin: true },
+  { to: '/relatorios', icon: 'chart', title: 'Relatórios', text: 'Vendas, ticket médio e mais vendidos.', admin: true },
+]
+
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Bom dia'
+  if (h < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
+// Página inicial do painel: saudação, números do dia (só Admin) e atalhos.
+export default function HomePage() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'Admin'
+  const [report, setReport] = React.useState(null)
+
+  // Resumo do dia é "bônus": se a chamada falhar, a página só não mostra os números.
+  React.useEffect(() => {
+    if (!isAdmin) return undefined
+    let cancelled = false
+    api
+      .getDailyReport(todayInputValue())
+      .then((r) => !cancelled && setReport(r))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  const firstName = user?.name?.split(' ')[0] || ''
+  const today = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+
+  return (
+    <section className="home">
+      <header className="home-hero">
+        <span className="eyebrow">{today}</span>
+        <h1>
+          {greeting()}, {firstName}
+        </h1>
+        <p>Aqui está o resumo do seu restaurante hoje.</p>
+      </header>
+
+      {isAdmin && (
+        <div className="home-kpis">
+          <div className="kpi-card">
+            <span className="kpi-icon"><Icon name="wallet" /></span>
+            <span className="kpi-label">Vendas hoje</span>
+            <strong>{report ? formatMoney(report.totalSales) : '—'}</strong>
+          </div>
+          <div className="kpi-card">
+            <span className="kpi-icon"><Icon name="receipt" /></span>
+            <span className="kpi-label">Pedidos</span>
+            <strong>{report ? report.ordersCount : '—'}</strong>
+          </div>
+          <div className="kpi-card">
+            <span className="kpi-icon"><Icon name="trending" /></span>
+            <span className="kpi-label">Ticket médio</span>
+            <strong>{report ? formatMoney(report.averageTicket) : '—'}</strong>
+          </div>
+        </div>
+      )}
+
+      <h2 className="home-section">Acesso rápido</h2>
+      <div className="shortcut-grid">
+        {SHORTCUTS.filter((s) => !s.admin || isAdmin).map((s) => (
+          <Link key={s.to} to={s.to} className="shortcut">
+            <span className="shortcut-icon">
+              <Icon name={s.icon} size={20} />
+            </span>
+            <span className="shortcut-text">
+              <strong>{s.title}</strong>
+              <span>{s.text}</span>
+            </span>
+            <Icon name="arrowRight" size={16} className="shortcut-arrow" />
+          </Link>
+        ))}
+      </div>
     </section>
   )
 }

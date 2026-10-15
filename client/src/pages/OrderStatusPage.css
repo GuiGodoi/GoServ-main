@@ -1,0 +1,163 @@
+.status-loading { padding: 3rem 0; text-align: center; }
+.status-page .notice { margin-top: 1rem; }
+
+.ready-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  background: var(--success);
+  color: #0d2416;
+  box-shadow: 0 12px 30px rgba(95, 207, 138, 0.25);
+  animation: rise-in 0.35s ease, glow 2s ease-in-out infinite 0.4s;
+}
+@keyframes glow {
+  50% { box-shadow: 0 12px 40px rgba(95, 207, 138, 0.45); }
+}
+.ready-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 14px;
+  background: rgba(13, 36, 22, 0.12);
+  animation: ring 1.2s ease-in-out infinite;
+}
+@keyframes ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(-12deg); }
+  20%, 40% { transform: rotate(12deg); }
+}
+.ready-title { font-size: 1.15rem; font-weight: 800; }
+.ready-sub { margin-top: 0.1rem; font-weight: 600; opacity: 0.8; }
+
+.ticket-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding: 1.5rem 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(232, 165, 75, 0.16), transparent 70%),
+    var(--bg-elevated);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+/* "picote" de comanda nas laterais */
+.ticket-card::before,
+.ticket-card::after {
+  content: '';
+  position: absolute;
+  bottom: 52px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+.ticket-card::before { left: -10px; }
+.ticket-card::after { right: -10px; }
+.ticket-number {
+  font-size: 4.5rem;
+  line-height: 1;
+  margin: 0.25rem 0 1rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.ready-mode .ticket-number { color: var(--success); }
+.ticket-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 0.9rem;
+  border-top: 1.5px dashed var(--border-strong);
+  font-weight: 700;
+}
+.live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.live-chip.online { color: var(--success); background: var(--success-soft); }
+.live-chip.online .live-dot { animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+/* Linha do tempo vertical */
+.timeline {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0 0.25rem;
+}
+.step {
+  position: relative;
+  display: flex;
+  gap: 0.9rem;
+  padding-bottom: 1.35rem;
+}
+.step:last-child { padding-bottom: 0; }
+.step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 30px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.step.done:not(:last-child)::before { background: var(--accent); }
+.step-dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--accent-ink);
+}
+.step.done .step-dot { background: var(--accent); border-color: var(--accent); }
+.step.current .step-dot { border-color: var(--accent); }
+.step-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.6s ease-out infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(232, 165, 75, 0.6); }
+  100% { box-shadow: 0 0 0 10px rgba(232, 165, 75, 0); }
+}
+.step-body {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 28px;
+}
+.step-label { color: var(--faint); font-weight: 500; }
+.step.done .step-label { color: var(--muted); }
+.step.current .step-label { color: var(--text); font-weight: 700; }
+.step-time {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+
+.new-order { margin-top: 1.5rem; }

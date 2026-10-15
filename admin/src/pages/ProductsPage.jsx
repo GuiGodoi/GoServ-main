@@ -1,7 +1,18 @@
 import React from 'react'
 import { api } from '../services/api'
-import { Checkbox, Select, ImageUpload, useContentLoading } from '../components/ui'
+import {
+  Checkbox,
+  EmptyState,
+  Icon,
+  ImageUpload,
+  PageHeader,
+  Select,
+  useContentLoading,
+  useToast,
+  useDialog,
+} from '../components/ui'
 import { formatMoney } from '../utils'
+import './ProductsPage.css'
 
 const emptyForm = {
   name: '',
@@ -14,20 +25,21 @@ const emptyForm = {
 // CRUD dos produtos do cardápio: formulário (cria ou edita) + upload de foto
 // (com recorte) + tabela com a lista, incluindo alternar disponibilidade rápido.
 export default function ProductsPage() {
+  const toast = useToast()
   const [items, setItems] = React.useState([])
   const [categories, setCategories] = React.useState([])
   const [form, setForm] = React.useState(emptyForm)
   const [photoFile, setPhotoFile] = React.useState(null)
   const [photoPreview, setPhotoPreview] = React.useState('')
   const [editingId, setEditingId] = React.useState(null)
-  const [error, setError] = React.useState('')
   const [busy, setBusy] = React.useState(false)
   const [booting, setBooting] = React.useState(true)
+  const formRef = React.useRef(null)
+  const dialog = useDialog()
   useContentLoading(booting)
 
   const load = React.useCallback(async () => {
     try {
-      setError('')
       const [menu, cats] = await Promise.all([
         api.getMenuItems(),
         api.getCategories(),
@@ -35,11 +47,11 @@ export default function ProductsPage() {
       setItems(menu)
       setCategories(cats)
     } catch (e) {
-      setError(e.message)
+      toast.error(e)
     } finally {
       setBooting(false)
     }
-  }, [])
+  }, [toast])
 
   React.useEffect(() => {
     load()
@@ -58,6 +70,7 @@ export default function ProductsPage() {
     })
     setPhotoFile(null)
     setPhotoPreview(item.photoUrl || '')
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   function resetForm() {
@@ -80,7 +93,6 @@ export default function ProductsPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setBusy(true)
-    setError('')
     try {
       const payload = buildPayload()
       let id = editingId
@@ -98,21 +110,28 @@ export default function ProductsPage() {
       resetForm()
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Excluir este produto?')) return
+  async function handleDelete(item) {
+    const id = item.id
+    const ok = await dialog.confirm({
+      title: `Excluir "${item.name}"?`,
+      message: 'O produto sai do cardápio. Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      tone: 'danger',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       await api.deleteMenuItem(id)
       if (editingId === id) resetForm()
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
@@ -124,7 +143,13 @@ export default function ProductsPage() {
       setPhotoPreview('')
       return
     }
-    if (!confirm('Remover a foto deste produto?')) return
+    const ok = await dialog.confirm({
+      title: 'Remover a foto?',
+      message: 'O produto passa a aparecer sem imagem no cardápio.',
+      confirmLabel: 'Remover',
+      tone: 'danger',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       await api.deleteMenuItemPhoto(editingId)
@@ -132,7 +157,7 @@ export default function ProductsPage() {
       setPhotoPreview('')
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
@@ -152,7 +177,7 @@ export default function ProductsPage() {
       })
       await load()
     } catch (err) {
-      setError(err.message)
+      toast.error(err)
     } finally {
       setBusy(false)
     }
@@ -165,249 +190,176 @@ export default function ProductsPage() {
 
   return (
     <section className="page">
-      <header>
-        <h1>Produtos</h1>
-        <p>Cadastre itens do cardápio. Fotos vão para o banco em JPEG.</p>
-      </header>
+      <PageHeader
+        title="Produtos"
+        description="Itens do cardápio com foto, preço e categoria. As fotos são recortadas em 1:1 e salvas em JPEG."
+      />
 
-      {error && <p className="error">{error}</p>}
-
-      <form className="panel" onSubmit={handleSubmit}>
-        <h2>{editingId ? 'Editar produto' : 'Novo produto'}</h2>
-        <div className="grid">
-          <label className="field">
-            Nome
-            <input
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </label>
-          <label className="field">
-            Preço (R$)
-            <input
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-            />
-          </label>
-          <Select
-            label="Categoria"
-            value={form.categoryId}
-            placeholder="Sem categoria"
-            options={categoryOptions}
-            onChange={(v) => setForm({ ...form, categoryId: v })}
+      <form className="card" onSubmit={handleSubmit} ref={formRef}>
+        <div className="card-header">
+          <h2>
+            <Icon name={editingId ? 'edit' : 'plus'} />
+            {editingId ? 'Editar produto' : 'Novo produto'}
+          </h2>
+          {editingId && <span className="badge info">Editando #{editingId}</span>}
+        </div>
+        <div className="card-body product-form">
+          <ImageUpload
+            previewUrl={photoPreview}
+            onFileChange={(file) => {
+              setPhotoFile(file)
+              setPhotoPreview(file ? URL.createObjectURL(file) : '')
+            }}
+            onClear={clearPhoto}
+            disabled={busy}
           />
-          <div className="check-wrap">
-            <Checkbox
-              label="Disponível no cardápio"
-              checked={form.available}
-              onChange={(v) => setForm({ ...form, available: v })}
+          <div className="form-grid">
+            <label className="field span-2">
+              <span>Nome</span>
+              <input
+                className="input"
+                required
+                placeholder="Ex.: X-Burger da casa"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>Preço</span>
+              <div className="input-group">
+                <span className="prefix">R$</span>
+                <input
+                  className="input"
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0,00"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                />
+              </div>
+            </label>
+            <Select
+              label="Categoria"
+              value={form.categoryId}
+              placeholder="Sem categoria"
+              options={categoryOptions}
+              onChange={(v) => setForm({ ...form, categoryId: v })}
             />
+            <label className="field span-2">
+              <span>Descrição</span>
+              <textarea
+                className="input"
+                rows={2}
+                placeholder="Ingredientes, tamanho, acompanhamentos…"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </label>
+            <div className="span-2">
+              <Checkbox
+                label="Disponível no cardápio"
+                checked={form.available}
+                onChange={(v) => setForm({ ...form, available: v })}
+              />
+            </div>
           </div>
         </div>
-        <label className="field">
-          Descrição
-          <textarea
-            rows={2}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-        </label>
-
-        <ImageUpload
-          previewUrl={photoPreview}
-          onFileChange={(file) => {
-            setPhotoFile(file)
-            setPhotoPreview(file ? URL.createObjectURL(file) : '')
-          }}
-          onClear={clearPhoto}
-          disabled={busy}
-        />
-
-        <div className="actions">
-          <button type="submit" disabled={busy}>
-            {editingId ? 'Salvar' : 'Cadastrar'}
-          </button>
+        <div className="card-footer">
           {editingId && (
-            <button type="button" className="ghost" onClick={resetForm}>
+            <button type="button" className="btn btn-secondary" onClick={resetForm}>
               Cancelar
             </button>
           )}
+          <button type="submit" className="btn" disabled={busy}>
+            <Icon name={editingId ? 'check' : 'plus'} size={16} />
+            {editingId ? 'Salvar alterações' : 'Cadastrar produto'}
+          </button>
         </div>
       </form>
 
-      <div className="panel">
-        <h2>Lista ({items.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Produto</th>
-              <th>Categoria</th>
-              <th>Preço</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <div className="product-cell">
-                    {item.photoUrl ? (
-                      <img src={item.photoUrl} alt="" />
-                    ) : (
-                      <span className="ph" />
-                    )}
-                    <span>
-                      {item.name}
-                      {item.isOnPromo && (
-                        <span className="promo-tag">-{item.discountPercent}%</span>
-                      )}
-                    </span>
-                  </div>
-                </td>
-                <td>{item.categoryName || '—'}</td>
-                <td>{formatMoney(item.originalPrice ?? item.price)}</td>
-                <td>
-                  <button
-                    type="button"
-                    className={item.available ? 'status on' : 'status off'}
-                    onClick={() => toggleAvailable(item)}
-                    disabled={busy}
-                  >
-                    {item.available ? 'Disponível' : 'Indisponível'}
-                  </button>
-                </td>
-                <td className="row-actions">
-                  <button type="button" className="ghost" onClick={() => startEdit(item)}>
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    Excluir
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="card">
+        <div className="card-header">
+          <h2>
+            Cardápio <span className="count">{items.length}</span>
+          </h2>
+        </div>
+        {items.length === 0 ? (
+          <EmptyState icon="package" title="Nenhum produto ainda">
+            Cadastre o primeiro item do cardápio no formulário acima.
+          </EmptyState>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Preço</th>
+                  <th>Status</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className={editingId === item.id ? 'is-editing' : ''}>
+                    <td>
+                      <div className="with-thumb">
+                        {item.photoUrl ? (
+                          <img className="thumb" src={item.photoUrl} alt="" />
+                        ) : (
+                          <span className="thumb">
+                            <Icon name="image" size={16} />
+                          </span>
+                        )}
+                        <div>
+                          <strong>{item.name}</strong>{' '}
+                          {item.isOnPromo && <span className="pct">-{item.discountPercent}%</span>}
+                          {item.description && <span className="sub clamp">{item.description}</span>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="muted">{item.categoryName || '—'}</td>
+                    <td className="num">{formatMoney(item.originalPrice ?? item.price)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`badge ${item.available ? 'success' : 'warn'}`}
+                        onClick={() => toggleAvailable(item)}
+                        disabled={busy}
+                        title="Clique para alternar"
+                      >
+                        {item.available ? 'Disponível' : 'Indisponível'}
+                      </button>
+                    </td>
+                    <td className="actions-cell">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        aria-label={`Editar ${item.name}`}
+                        title="Editar"
+                        onClick={() => startEdit(item)}
+                      >
+                        <Icon name="edit" size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn danger"
+                        aria-label={`Excluir ${item.name}`}
+                        title="Excluir"
+                        onClick={() => handleDelete(item)}
+                      >
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      <style>{`
-        .page h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
-        .page > header p { margin: 0 0 1.25rem; color: var(--muted); }
-        .error { color: var(--danger); }
-        .panel {
-          background: var(--panel);
-          border: 1px solid var(--line);
-          border-radius: var(--radius);
-          padding: 1rem 1.1rem;
-          margin-bottom: 1rem;
-        }
-        .panel h2 { margin: 0 0 0.85rem; font-size: 1rem; }
-        .grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0.75rem;
-          margin-bottom: 0.75rem;
-        }
-        .field {
-          display: flex;
-          flex-direction: column;
-          gap: 0.3rem;
-          margin-bottom: 0.75rem;
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-        .check-wrap {
-          display: flex;
-          align-items: end;
-          padding-bottom: 0.35rem;
-        }
-        input, textarea {
-          border: 1px solid var(--line);
-          border-radius: 8px;
-          padding: 0.55rem 0.65rem;
-          background: #fff;
-          font: inherit;
-        }
-        .actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
-        .page button {
-          border: none;
-          background: var(--accent);
-          color: #fff;
-          padding: 0.5rem 0.9rem;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .page button:hover { background: var(--accent-hover); }
-        .page button:disabled { opacity: 0.6; cursor: wait; }
-        .page button.ghost {
-          background: transparent;
-          color: var(--ink);
-          border: 1px solid var(--line);
-        }
-        .page button.danger {
-          background: transparent;
-          color: var(--danger);
-          border: 1px solid transparent;
-        }
-        .page button.status {
-          font-size: 0.75rem;
-          padding: 0.25rem 0.5rem;
-        }
-        .page button.status.on {
-          background: rgba(31, 107, 74, 0.12);
-          color: var(--accent);
-        }
-        .page button.status.off {
-          background: rgba(154, 107, 18, 0.12);
-          color: var(--warn);
-        }
-        table { width: 100%; border-collapse: collapse; }
-        th, td {
-          text-align: left;
-          padding: 0.55rem 0.35rem;
-          border-bottom: 1px solid var(--line);
-          font-size: 0.9rem;
-          vertical-align: middle;
-        }
-        th { color: var(--muted); font-weight: 500; }
-        .row-actions { text-align: right; white-space: nowrap; }
-        .product-cell {
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-        }
-        .product-cell img, .ph {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
-          object-fit: cover;
-          background: var(--bg);
-        }
-        .promo-tag {
-          display: inline-block;
-          margin-left: 0.35rem;
-          font-size: 0.65rem;
-          font-weight: 700;
-          color: #1f6b4a;
-          background: rgba(31, 107, 74, 0.12);
-          padding: 0.1rem 0.35rem;
-          border-radius: 999px;
-        }
-        @media (max-width: 640px) {
-          .grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
     </section>
   )
 }

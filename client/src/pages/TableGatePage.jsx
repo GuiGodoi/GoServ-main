@@ -2,6 +2,10 @@ import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { fetchPublicTable, joinTable } from '../services/api'
 import ClientTopBar from '../components/ClientTopBar'
+import Icon from '../components/Icon'
+import { useToast } from '../components/Toast'
+import './TableGatePage.css'
+
 
 // Tela que abre ao escanear o QR code da mesa: pede nome + senha do dia para
 // liberar a mesa (POST /api/tables/:id/join) antes de ir para o cardápio.
@@ -12,6 +16,7 @@ export default function TableGatePage() {
   const [guestName, setGuestName] = React.useState('')
   const [dayPasscode, setDayPasscode] = React.useState('')
   const [error, setError] = React.useState('')
+  const toast = useToast()
   const [loading, setLoading] = React.useState(true)
   const [busy, setBusy] = React.useState(false)
 
@@ -38,7 +43,6 @@ export default function TableGatePage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setBusy(true)
-    setError('')
     try {
       const session = await joinTable(tableId, {
         guestName,
@@ -58,115 +62,78 @@ export default function TableGatePage() {
       // é ele que identifica a mesa em todas as chamadas seguintes.
       navigate(`/mesa/${session.accessToken}`, { replace: true })
     } catch (err) {
-      setError(err.message || 'Não foi possível liberar a mesa')
+      toast.error(err, { title: 'Não foi possível entrar na mesa' })
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div className="gate-page">
-      <ClientTopBar tableLabel={table?.label} title={table?.restaurantName || 'GoServ'} />
+    <div className="page gate-page">
+      <ClientTopBar title={table?.restaurantName || 'GoServ'} />
 
-      {loading && <p className="muted">Carregando mesa…</p>}
+      {loading && <p className="muted gate-loading">Carregando mesa…</p>}
+
       {!loading && table && (
-        <>
-          <h1>Entrar na {table.label}</h1>
+        <div className="gate">
+          <div className="gate-badge">
+            <Icon name="table" size={30} />
+          </div>
+          <span className="eyebrow">Bem-vindo</span>
+          <h1 className="display">{table.label}</h1>
           <p className="lead">
-            Informe seu nome e a <strong>senha do dia</strong> fornecida pelos
-            funcionários para fazer pedidos nesta mesa.
+            Informe seu nome e a <strong>senha do dia</strong> (peça a um
+            atendente) para fazer pedidos nesta mesa.
           </p>
 
-          <form onSubmit={handleSubmit}>
-            <label>
-              Seu nome
+          <form className="panel gate-form" onSubmit={handleSubmit}>
+            <label className="field">
+              <span>Seu nome</span>
               <input
+                className="input"
                 required
                 autoComplete="name"
                 maxLength={80}
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                placeholder="Ex.: Ana"
+                placeholder="Como podemos te chamar?"
               />
             </label>
-            <label>
-              Senha do dia
+            <label className="field">
+              <span>Senha do dia</span>
               <input
+                className="input passcode-input"
                 required
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 value={dayPasscode}
                 onChange={(e) => setDayPasscode(e.target.value)}
-                placeholder="6 dígitos"
+                placeholder="••••••"
               />
             </label>
-            {error && <p className="err">{error}</p>}
-            <button type="submit" className="primary" disabled={busy}>
+            <button type="submit" className="btn btn-block" disabled={busy}>
               {busy ? 'Validando…' : 'Acessar cardápio'}
+              {!busy && <Icon name="arrowRight" size={18} />}
             </button>
           </form>
 
-          <p className="hint">
-            Só quer consultar o cardápio?{' '}
-            <a href="/cardapio">Abrir cardápio sem pedidos</a>
-          </p>
-        </>
+          <a href="/cardapio" className="gate-browse">
+            <Icon name="eye" size={16} />
+            Só quero ver o cardápio
+          </a>
+        </div>
       )}
 
-      {!loading && !table && error && <p className="err">{error}</p>}
-
-      <style>{`
-        .gate-page {
-          max-width: 420px;
-          margin: 0 auto;
-          padding: 0.75rem 1.1rem 2.5rem;
-        }
-        h1 {
-          margin: 0.5rem 0 0.35rem;
-          font-size: clamp(1.35rem, 5vw, 1.7rem);
-          font-family: var(--display);
-        }
-        .lead {
-          color: var(--muted);
-          font-size: 0.92rem;
-          line-height: 1.45;
-          margin: 0 0 1.1rem;
-        }
-        form {
-          display: grid;
-          gap: 0.85rem;
-        }
-        label {
-          display: flex;
-          flex-direction: column;
-          gap: 0.35rem;
-          font-size: 0.85rem;
-          font-weight: 600;
-        }
-        input {
-          border: 1px solid var(--border);
-          border-radius: 10px;
-          background: var(--bg-elevated);
-          color: var(--text);
-          padding: 0.75rem 0.85rem;
-          font-size: 1rem;
-        }
-        .primary {
-          border: none;
-          background: var(--accent);
-          color: #1a1510;
-          font-weight: 700;
-          padding: 0.9rem;
-          border-radius: 12px;
-          cursor: pointer;
-          min-height: 48px;
-        }
-        .primary:disabled { opacity: 0.65; }
-        .err { color: var(--danger); margin: 0; }
-        .muted, .hint { color: var(--muted); font-size: 0.85rem; }
-        .hint a { color: var(--accent); }
-        .hint { margin-top: 1.25rem; }
-      `}</style>
+      {!loading && !table && error && (
+        <div className="screen-state">
+          <span className="state-icon">
+            <Icon name="alert" size={28} />
+          </span>
+          <h2>Mesa não encontrada</h2>
+          <p>{error}</p>
+          <a href="/cardapio" className="btn btn-secondary">Ver cardápio</a>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,0 +1,42 @@
+.tables-header { flex-wrap: wrap; }
+.tables-header h2 .badge { margin-left: 0.25rem; }
+
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 360px;
+}
+.inline-form .input { min-height: 38px; }
+
+.table-icon { color: var(--muted); }
+.table-icon.on { background: var(--accent-soft); color: var(--accent); }
+
+.spend { min-width: 180px; display: grid; gap: 0.35rem; }
+.spend-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.84rem;
+}
+.meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+.meter.warm i { background: #c48a16; }
+.meter.hot i { background: var(--danger); }
+
+.row-actions { display: inline-flex; gap: 0.35rem; justify-content: flex-end; }
+
+@media (max-width: 700px) {
+  .inline-form { max-width: none; flex-basis: 100%; }
+}

@@ -1,8 +1,15 @@
 import React from 'react'
 import { api } from '../services/api'
 import { connectKitchenHub } from '../services/kitchenHub'
-import { useContentLoading } from '../components/ui'
+import {
+  Icon,
+  PageHeader,
+  useContentLoading,
+  useToast,
+  useDialog,
+} from '../components/ui'
 import { elapsedLabel } from '../utils'
+import './KitchenPage.css'
 
 // Cada coluna do quadro (kanban) representa um status do pedido, na ordem em
 // que ele avança; "next" é para qual status o botão da coluna deve mandar o pedido.
@@ -15,13 +22,26 @@ const COLUMNS = [
 // Painel da cozinha (KDS): quadro em tempo real com os pedidos pagos, um
 // clique avança o status de cada um. Atualiza sozinho via SignalR.
 export default function KitchenPage() {
+  const toast = useToast()
   const [orders, setOrders] = React.useState([])
-  const [error, setError] = React.useState('')
   const [live, setLive] = React.useState('connecting')
   const [busyId, setBusyId] = React.useState(null)
   const [booting, setBooting] = React.useState(true)
   const [, setTick] = React.useState(0)
+  const [restaurantName, setRestaurantName] = React.useState('')
+  const dialog = useDialog()
   useContentLoading(booting)
+
+  React.useEffect(() => {
+    let cancelled = false
+    api
+      .getRestaurant()
+      .then((r) => !cancelled && setRestaurantName(r?.name || ''))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Força um re-render a cada 30s só para o "tempo decorrido" (elapsedLabel)
   // de cada ficha continuar contando, mesmo sem nenhum pedido novo chegando.
@@ -50,7 +70,6 @@ export default function KitchenPage() {
 
     async function boot() {
       try {
-        setError('')
         const list = await api.getOrders()
         if (cancelled) return
         setOrders(
@@ -70,7 +89,7 @@ export default function KitchenPage() {
         if (!cancelled) setLive('online')
       } catch (e) {
         if (!cancelled) {
-          setError(e.message || 'Falha ao carregar a cozinha')
+          toast.error(e)
           setLive('offline')
         }
       } finally {
@@ -83,257 +102,148 @@ export default function KitchenPage() {
       cancelled = true
       connection?.stop()
     }
-  }, [upsertOrder])
+  }, [upsertOrder, toast])
 
   async function advance(order, nextStatus) {
     setBusyId(order.id)
-    setError('')
     try {
       const updated = await api.updateOrderStatus(order.id, nextStatus)
       upsertOrder(updated)
     } catch (e) {
-      setError(e.message)
+      toast.error(e)
     } finally {
       setBusyId(null)
     }
   }
 
   async function cancel(order) {
-    if (!confirm(`Cancelar pedido #${order.id}?`)) return
+    const ok = await dialog.confirm({
+      title: `Cancelar pedido #${String(order.id).padStart(4, '0')}?`,
+      message: `${order.tableLabel || 'Sem mesa'} · o pedido sai do quadro da cozinha.`,
+      confirmLabel: 'Cancelar pedido',
+      cancelLabel: 'Voltar',
+      tone: 'danger',
+    })
+    if (!ok) return
+
     setBusyId(order.id)
     try {
       const updated = await api.updateOrderStatus(order.id, 'Cancelled')
       upsertOrder(updated)
     } catch (e) {
-      setError(e.message)
+      toast.error(e)
     } finally {
       setBusyId(null)
     }
   }
 
+  const liveLabel =
+    live === 'online' ? 'Ao vivo' : live === 'connecting' ? 'Conectando…' : 'Offline'
+
   return (
     <section className="kitchen">
-      <header className="head">
-        <div>
-          <h1>Cozinha — Lanchonete do Zé</h1>
-          <p>
-            {orders.length} pedidos abertos
-            {live === 'online' ? ' · CONECTADO ●' : live === 'connecting' ? ' · conectando…' : ' · OFFLINE'}
-          </p>
-        </div>
-        <span className={`pulse ${live}`}>
-          {live === 'online' ? 'Conectado' : live === 'connecting' ? 'Conectando…' : 'Offline'}
-        </span>
-      </header>
-
-      {error && <p className="error">{error}</p>}
+      <PageHeader
+        title="Cozinha"
+        description={`${restaurantName ? `${restaurantName} · ` : ''}${orders.length} ${
+          orders.length === 1 ? 'pedido aberto' : 'pedidos abertos'
+        }`}
+        actions={
+          <span className={`live-pill ${live}`}>
+            <span className="live-dot" />
+            {liveLabel}
+          </span>
+        }
+      />
 
       <div className="board">
         {COLUMNS.map((col) => {
           const columnOrders = orders.filter((o) => o.status === col.status)
           return (
-            <div key={col.status} className="column">
-              <h2>
-                {col.title}
-                <span>{columnOrders.length}</span>
-              </h2>
-              <div className="stack">
+            <div key={col.status} className={`lane lane-${col.status.toLowerCase()}`}>
+              <header className="lane-head">
+                <span className="lane-dot" />
+                <h2>{col.title}</h2>
+                <span className="lane-count">{columnOrders.length}</span>
+              </header>
+              <div className="lane-body">
                 {columnOrders.length === 0 && (
-                  <p className="empty">Nenhum pedido</p>
+                  <div className="lane-empty">
+                    <Icon name="inbox" size={20} />
+                    Nenhum pedido
+                  </div>
                 )}
-                {columnOrders.map((order) => (
-                  <article key={order.id} className="ticket">
-                    <div className="ticket-head">
-                      <strong>
-                        #{String(order.id).padStart(4, '0')} ·{' '}
-                        {order.tableLabel || 'Sem mesa'}
-                      </strong>
-                      <span className="clock">{elapsedLabel(order.createdAt)}</span>
-                    </div>
-                    <ul>
-                      {order.items.map((item) => {
-                        const bits = [
-                          item.notes,
-                          ...(item.addons || []).map((a) => `+ ${a.name}`),
-                        ].filter(Boolean)
-                        return (
-                          <li key={item.id}>
-                            <strong>
-                              {item.quantity}× {item.menuItemName}
-                            </strong>
-                            {bits.length > 0 && (
-                              <span className="obs">{bits.join(' · ')}</span>
-                            )}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    {order.customerNotes && (
-                      <span className="obs">Pedido: {order.customerNotes}</span>
-                    )}
-                    <div className="actions">
-                      {col.status === 'Received' && (
+                {columnOrders.map((order) => {
+                  const mins = minutesSince(order.createdAt)
+                  const age = mins >= 20 ? 'late' : mins >= 10 ? 'slow' : ''
+                  return (
+                    <article key={order.id} className={`ticket ${age}`}>
+                      <div className="ticket-head">
+                        <span className="ticket-no">#{String(order.id).padStart(4, '0')}</span>
+                        <span className="ticket-table">{order.tableLabel || 'Sem mesa'}</span>
+                        <span className="ticket-clock">
+                          <Icon name="clock" size={13} />
+                          {elapsedLabel(order.createdAt)}
+                        </span>
+                      </div>
+                      <ul className="ticket-items">
+                        {order.items.map((item) => {
+                          const bits = [
+                            item.notes,
+                            ...(item.addons || []).map((a) => `+ ${a.name}`),
+                          ].filter(Boolean)
+                          return (
+                            <li key={item.id}>
+                              <span className="qty">{item.quantity}×</span>
+                              <div>
+                                <strong>{item.menuItemName}</strong>
+                                {bits.length > 0 && (
+                                  <span className="obs">{bits.join(' · ')}</span>
+                                )}
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      {order.customerNotes && (
+                        <p className="ticket-note">
+                          <strong>Obs.:</strong> {order.customerNotes}
+                        </p>
+                      )}
+                      <div className="ticket-actions">
+                        {col.status === 'Received' && (
+                          <button
+                            type="button"
+                            className="icon-btn danger"
+                            title="Cancelar pedido"
+                            aria-label={`Cancelar pedido ${order.id}`}
+                            disabled={busyId === order.id}
+                            onClick={() => cancel(order)}
+                          >
+                            <Icon name="x" size={16} />
+                          </button>
+                        )}
                         <button
                           type="button"
-                          className="ghost"
+                          className={`btn btn-sm advance ${col.status === 'Ready' ? 'btn-secondary' : ''}`}
                           disabled={busyId === order.id}
-                          onClick={() => cancel(order)}
+                          onClick={() => advance(order, col.next)}
                         >
-                          Cancelar
+                          {col.nextLabel}
+                          <Icon name={col.status === 'Ready' ? 'check' : 'arrowRight'} size={14} />
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className={col.status === 'Ready' ? 'ghost-act' : ''}
-                        disabled={busyId === order.id}
-                        onClick={() => advance(order, col.next)}
-                      >
-                        {col.nextLabel}
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             </div>
           )
         })}
       </div>
-
-      <style>{`
-        .kitchen { max-width: none; }
-        .head {
-          display: flex;
-          justify-content: space-between;
-          align-items: start;
-          gap: 1rem;
-          margin-bottom: 1.25rem;
-        }
-        .head h1 { margin: 0 0 0.25rem; font-size: 1.35rem; }
-        .head p { margin: 0; color: var(--muted); font-family: var(--mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
-        .pulse {
-          font-family: var(--mono);
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          padding: 0.35rem 0.6rem;
-          border-radius: 999px;
-          border: 1px solid var(--line);
-        }
-        .pulse.online {
-          color: var(--accent);
-          background: rgba(31, 107, 74, 0.12);
-          border-color: transparent;
-        }
-        .pulse.connecting, .pulse.offline { color: var(--muted); }
-        .error { color: var(--danger); }
-        .board {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(220px, 1fr));
-          gap: 0;
-          align-items: stretch;
-          border: 1px solid var(--line);
-          border-radius: 4px;
-          overflow: hidden;
-          background: var(--panel);
-        }
-        .column {
-          border-right: 1px solid var(--line);
-          min-height: 280px;
-          padding: 0;
-        }
-        .column:last-child { border-right: none; }
-        .column h2 {
-          margin: 0;
-          font-size: 0.9rem;
-          display: flex;
-          justify-content: space-between;
-          padding: 0.65rem 0.75rem;
-          background: var(--bg);
-          border-bottom: 1px solid var(--line);
-          font-weight: 700;
-        }
-        .column h2 span {
-          font-family: var(--mono);
-          color: var(--muted);
-          font-weight: 600;
-        }
-        .stack { display: grid; gap: 0; padding: 0.5rem; }
-        .empty {
-          margin: 0;
-          color: var(--muted);
-          font-size: 0.85rem;
-          padding: 0.5rem 0.25rem;
-        }
-        .ticket {
-          background: #fff;
-          border: 1px solid var(--line);
-          border-radius: 2px;
-          padding: 0.65rem;
-          margin-bottom: 0.5rem;
-        }
-        .ticket-head {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 0.4rem;
-          font-size: 0.9rem;
-        }
-        .clock {
-          font-family: var(--mono);
-          font-size: 0.75rem;
-          color: var(--muted);
-        }
-        ul {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: grid;
-          gap: 0.35rem;
-        }
-        li {
-          display: flex;
-          flex-direction: column;
-          gap: 0.2rem;
-          font-size: 0.92rem;
-        }
-        .obs {
-          display: inline-block;
-          font-size: 0.78rem;
-          background: var(--bg);
-          border-left: 2px solid var(--ink);
-          padding: 0.15rem 0.4rem;
-          margin: 0.1rem 0;
-        }
-        .actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 0.4rem;
-          margin-top: 0.65rem;
-        }
-        .actions button {
-          border: none;
-          background: var(--ink);
-          color: #fff;
-          padding: 0.45rem 0.7rem;
-          border-radius: 2px;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 0.82rem;
-        }
-        .actions button:disabled { opacity: 0.6; }
-        .actions .ghost {
-          background: transparent;
-          color: var(--danger);
-          border: 1px solid var(--line);
-        }
-        .actions .ghost-act {
-          background: transparent;
-          color: var(--ink);
-          border: 1px solid var(--ink);
-        }
-        @media (max-width: 900px) {
-          .board { grid-template-columns: 1fr; }
-          .column { border-right: none; border-bottom: 1px solid var(--line); }
-        }
-      `}</style>
     </section>
   )
+}
+
+function minutesSince(iso) {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000))
 }

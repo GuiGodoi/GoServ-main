@@ -4,7 +4,10 @@ import { useCart } from '../cart/CartContext'
 import { useKioskIdleReset } from '../hooks/useKioskIdleReset'
 import { createOrder, validateTableSession } from '../services/api'
 import ClientTopBar from '../components/ClientTopBar'
+import Icon from '../components/Icon'
+import { useToast } from '../components/Toast'
 import { formatPrice } from '../utils'
+import './CartPage.css'
 
 // Tela de revisão do carrinho: lista os itens escolhidos, permite ajustar
 // quantidade/remover, e envia o pedido (POST /api/orders) ao confirmar.
@@ -23,7 +26,7 @@ export default function CartPage() {
   } = useCart()
 
   const [busy, setBusy] = React.useState(false)
-  const [error, setError] = React.useState('')
+  const toast = useToast()
   const [tableLabel, setTableLabel] = React.useState('')
 
   const backPath = tableToken ? `/mesa/${tableToken}` : '/'
@@ -46,7 +49,6 @@ export default function CartPage() {
   // certo, esvazia o carrinho e leva o cliente pra tela de pagamento (Pix simulado).
   async function handleCheckout() {
     setBusy(true)
-    setError('')
     try {
       const order = await createOrder(toCreatePayload())
       clear()
@@ -55,7 +57,7 @@ export default function CartPage() {
         : `/pagamento/${order.publicId}`
       navigate(payPath)
     } catch (e) {
-      setError(e.message || 'Falha ao enviar pedido')
+      toast.error(e, { title: 'Pedido não enviado' })
     } finally {
       setBusy(false)
     }
@@ -64,163 +66,102 @@ export default function CartPage() {
   if (itemCount === 0) {
     return (
       <div className="page">
-        <ClientTopBar tableLabel={tableLabel} title="Seu pedido" />
-        <p className="muted">Carrinho vazio. Adicione itens do cardápio.</p>
-        <Link to={backPath} className="ghost">
-          Continuar escolhendo
-        </Link>
-        <PageStyles />
+        <ClientTopBar tableLabel={tableLabel} title="Seu pedido" backTo={backPath} />
+        <div className="screen-state">
+          <span className="state-icon">
+            <Icon name="bag" size={28} />
+          </span>
+          <h2>Seu carrinho está vazio</h2>
+          <p>Escolha algo gostoso no cardápio para começar.</p>
+          <Link to={backPath} className="btn">
+            Ver cardápio
+          </Link>
+        </div>
       </div>
     )
   }
 
-  return (
-    <div className="page">
-      <ClientTopBar tableLabel={tableLabel} title="Seu pedido" />
 
-      <ul className="lines">
+  return (
+    <div className="page cart-page">
+      <ClientTopBar tableLabel={tableLabel} title="Seu pedido" backTo={backPath} />
+
+      <div className="cart-head">
+        <h1 className="display">Revise seu pedido</h1>
+        <span className="muted">
+          {itemCount} {itemCount === 1 ? 'item' : 'itens'}
+        </span>
+      </div>
+
+      <ul className="cart-lines">
         {lines.map((line) => {
           const addonNames = (line.addons || []).map((a) => `+ ${a.name}`).join(' · ')
-          const obsBits = [line.notes, addonNames].filter(Boolean).join(' · ')
           return (
-            <li key={line.key}>
-              <div className="row">
-                <div className="info">
+            <li key={line.key} className="cart-line">
+              <div className="line-main">
+                <div className="line-info">
                   <strong>{line.name}</strong>
-                  {obsBits && <div className="obs">{obsBits}</div>}
-                  <div className="stepper">
-                    <button type="button" onClick={() => updateQuantity(line.key, line.quantity - 1)}>
-                      −
-                    </button>
-                    <span>{line.quantity}</span>
-                    <button type="button" onClick={() => updateQuantity(line.key, line.quantity + 1)}>
-                      +
-                    </button>
-                    <button type="button" className="remove" onClick={() => removeLine(line.key)}>
-                      Remover
-                    </button>
-                  </div>
+                  {addonNames && <span className="line-extra">{addonNames}</span>}
+                  {line.notes && (
+                    <span className="line-note">
+                      <Icon name="message" size={12} /> {line.notes}
+                    </span>
+                  )}
                 </div>
-                <div className="price">{formatPrice(lineEstimate(line))}</div>
+                <span className="line-price">{formatPrice(lineEstimate(line))}</span>
+              </div>
+              <div className="line-actions">
+                <div className="stepper">
+                  <button
+                    type="button"
+                    aria-label="Diminuir"
+                    onClick={() => updateQuantity(line.key, line.quantity - 1)}
+                  >
+                    <Icon name={line.quantity <= 1 ? 'trash' : 'minus'} size={15} />
+                  </button>
+                  <span>{line.quantity}</span>
+                  <button
+                    type="button"
+                    aria-label="Aumentar"
+                    onClick={() => updateQuantity(line.key, line.quantity + 1)}
+                  >
+                    <Icon name="plus" size={15} />
+                  </button>
+                </div>
+                <button type="button" className="line-remove" onClick={() => removeLine(line.key)}>
+                  Remover
+                </button>
               </div>
             </li>
           )
         })}
       </ul>
 
-      <div className="total-row">
-        <strong>Total</strong>
-        <strong>{formatPrice(estimateTotal)}</strong>
-      </div>
-      <p className="hint">
-        Valor calculado no servidor no momento da confirmação.
-      </p>
-
-      {error && <p className="err">{error}</p>}
-
-      <button type="button" className="primary" disabled={busy} onClick={handleCheckout}>
-        {busy ? 'Enviando…' : 'Confirmar e pagar'}
-      </button>
-      <Link to={backPath} className="ghost">
-        Continuar escolhendo
+      <Link to={backPath} className="add-more">
+        <Icon name="plus" size={16} />
+        Adicionar mais itens
       </Link>
 
-      <PageStyles />
-    </div>
-  )
-}
+      <div className="panel summary">
+        <div className="summary-row">
+          <span className="muted">Subtotal</span>
+          <span>{formatPrice(estimateTotal)}</span>
+        </div>
+        <div className="summary-row total">
+          <strong>Total</strong>
+          <strong>{formatPrice(estimateTotal)}</strong>
+        </div>
+        <p className="summary-hint">
+          O valor final é confirmado pelo restaurante no envio do pedido.
+        </p>
+      </div>
 
-function PageStyles() {
-  return (
-    <style>{`
-      .page {
-        max-width: 480px;
-        margin: 0 auto;
-        padding: 0.75rem 1.15rem 3rem;
-      }
-      .lines {
-        list-style: none;
-        margin: 0 0 0.5rem;
-        padding: 0;
-      }
-      .lines li {
-        padding: 0.75rem 0;
-        border-bottom: 1px solid var(--border);
-      }
-      .row {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-      }
-      .info { flex: 1; min-width: 0; }
-      .info strong { font-size: 0.95rem; }
-      .obs {
-        display: inline-block;
-        margin-top: 0.25rem;
-        font-size: 0.75rem;
-        background: var(--bg-elevated);
-        padding: 0.1rem 0.4rem;
-      }
-      .stepper {
-        display: flex;
-        align-items: center;
-        gap: 0.45rem;
-        margin-top: 0.4rem;
-        font-size: 0.85rem;
-      }
-      .stepper button {
-        width: 22px;
-        height: 22px;
-        border: 1px solid var(--border);
-        background: transparent;
-        border-radius: 2px;
-        cursor: pointer;
-        color: var(--text);
-      }
-      .stepper .remove {
-        width: auto;
-        border: none;
-        color: var(--muted);
-        margin-left: 0.35rem;
-      }
-      .price { font-weight: 600; font-size: 0.92rem; }
-      .total-row {
-        display: flex;
-        justify-content: space-between;
-        border-top: 1px solid var(--border);
-        padding-top: 0.85rem;
-        margin-top: 0.35rem;
-        font-size: 1.05rem;
-      }
-      .hint, .muted {
-        color: var(--muted);
-        font-size: 0.78rem;
-        margin: 0.4rem 0 0.9rem;
-      }
-      .err { color: var(--danger); }
-      .primary {
-        width: 100%;
-        border: none;
-        background: var(--text);
-        color: var(--bg);
-        font-weight: 700;
-        padding: 0.8rem;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      .primary:disabled { opacity: 0.65; }
-      .ghost {
-        display: block;
-        margin-top: 0.55rem;
-        text-align: center;
-        text-decoration: none;
-        color: var(--text);
-        border: 1px solid var(--text);
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 0.9rem;
-      }
-    `}</style>
+      <div className="checkout-bar">
+        <button type="button" className="btn btn-block" disabled={busy} onClick={handleCheckout}>
+          {busy ? 'Enviando…' : 'Confirmar e pagar'}
+          {!busy && <span className="checkout-total">{formatPrice(estimateTotal)}</span>}
+        </button>
+      </div>
+    </div>
   )
 }

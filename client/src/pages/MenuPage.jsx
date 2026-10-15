@@ -14,6 +14,9 @@ import CustomizeModal from '../components/CustomizeModal'
 import CartBar from '../components/CartBar'
 import ClientTopBar from '../components/ClientTopBar'
 import PageLoading from '../components/PageLoading'
+import Icon from '../components/Icon'
+import './MenuPage.css'
+
 
 // Id "falso" de categoria usado só para a aba de promoções, que não existe no banco.
 const PROMO_TAB = 'promos'
@@ -97,37 +100,70 @@ export default function MenuPage({ browseOnly = false }) {
     setSelectedItem(item)
   }
 
+  const activeTab = tabs.find((t) => t.id === activeCategoryId)
+
   return (
-    <div className={`menu-page ${browseOnly ? 'browse' : ''}`}>
+    <div className={`page menu-page ${browseOnly ? 'browse' : ''}`}>
       <PageLoading active={loading} />
       <ClientTopBar tableLabel={session?.tableLabel} />
-      {browseOnly && (
-        <p className="browse-banner">
-          Cardápio para consulta. Para pedir, escaneie o QR da sua mesa.
-        </p>
-      )}
-      {session?.guestName && (
-        <p className="guest-line">Olá, {session.guestName}</p>
-      )}
-      {kiosk && <p className="kiosk-line">Modo kiosk</p>}
 
-      {error && <p className="state error">{error}</p>}
-
-      {!error && (
+      {error ? (
+        <div className="screen-state">
+          <span className="state-icon">
+            <Icon name="alert" size={28} />
+          </span>
+          <h2>Ops, algo deu errado</h2>
+          <p>{error}</p>
+        </div>
+      ) : (
         <>
+          <section className="menu-hero">
+            {session?.guestName ? (
+              <>
+                <span className="eyebrow">Olá, {session.guestName}</span>
+                <h1 className="display">O que vai pedir hoje?</h1>
+              </>
+            ) : (
+              <>
+                <span className="eyebrow">Cardápio</span>
+                <h1 className="display">Bem-vindo! Dê uma olhada.</h1>
+              </>
+            )}
+            {kiosk && <span className="pill pill-muted kiosk-pill">Modo kiosk</span>}
+          </section>
+
+          {browseOnly && (
+            <div className="notice notice-info browse-banner">
+              <Icon name="eye" size={16} />
+              <span>Cardápio só para consulta. Para pedir, escaneie o QR code da sua mesa.</span>
+            </div>
+          )}
+
           <CategoryTabs
             categories={tabs}
             activeId={activeCategoryId}
             onChange={setActiveCategoryId}
           />
 
+          {activeTab && !loading && (
+            <h2 className="menu-section-title">
+              {activeTab.name}
+              <span>{visibleItems.length}</span>
+            </h2>
+          )}
+
           <section className="menu-grid" aria-live="polite">
             {!loading && visibleItems.length === 0 ? (
-              <p className="state">
-                {activeCategoryId === PROMO_TAB
-                  ? 'Nenhuma promoção no momento.'
-                  : 'Nenhum item nesta categoria.'}
-              </p>
+              <div className="screen-state compact">
+                <span className="state-icon">
+                  <Icon name="utensils" size={24} />
+                </span>
+                <p>
+                  {activeCategoryId === PROMO_TAB
+                    ? 'Nenhuma promoção no momento.'
+                    : 'Nenhum item nesta categoria.'}
+                </p>
+              </div>
             ) : (
               visibleItems.map((item) => (
                 <MenuItemCard
@@ -155,40 +191,6 @@ export default function MenuPage({ browseOnly = false }) {
       )}
 
       {canOrder && <CartBar tableToken={tableToken} />}
-
-      <style>{`
-        .menu-page {
-          max-width: 720px;
-          margin: 0 auto;
-          padding: 0.75rem max(1rem, env(safe-area-inset-right)) 5.5rem max(1rem, env(safe-area-inset-left));
-        }
-        .menu-page.browse { padding-bottom: 2rem; }
-        .browse-banner {
-          margin: 0 0 0.85rem;
-          padding: 0.65rem 0.75rem;
-          border: 1px solid var(--border);
-          border-radius: 10px;
-          background: var(--accent-soft);
-          color: var(--accent);
-          font-size: 0.85rem;
-          line-height: 1.4;
-        }
-        .guest-line {
-          margin: -0.25rem 0 0.65rem;
-          font-size: 0.9rem;
-          color: var(--muted);
-        }
-        .kiosk-line {
-          margin: -0.35rem 0 0.75rem;
-          font-size: 0.75rem;
-          color: var(--muted);
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-        }
-        .menu-grid { display: grid; gap: 0.15rem; }
-        .state { color: var(--muted); }
-        .state.error { color: var(--danger); }
-      `}</style>
     </div>
   )
 }

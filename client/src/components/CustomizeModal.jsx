@@ -3,6 +3,9 @@
 import React from 'react'
 import { fetchAddons } from '../services/api'
 import { formatPrice } from '../utils'
+import Icon from './Icon'
+import { useToast } from './Toast'
+import './CustomizeModal.css'
 
 export default function CustomizeModal({ item, tableLabel, onClose, onConfirm }) {
   const [addons, setAddons] = React.useState([])
@@ -10,7 +13,7 @@ export default function CustomizeModal({ item, tableLabel, onClose, onConfirm })
   const [quantity, setQuantity] = React.useState(1)
   const [notes, setNotes] = React.useState('')
   const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState('')
+  const toast = useToast()
 
   React.useEffect(() => {
     let cancelled = false
@@ -20,7 +23,7 @@ export default function CustomizeModal({ item, tableLabel, onClose, onConfirm })
         const list = await fetchAddons(item.id)
         if (!cancelled) setAddons(list)
       } catch (e) {
-        if (!cancelled) setError(e.message)
+        if (!cancelled) toast.error(e, { title: 'Não foi possível carregar os adicionais' })
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -29,7 +32,7 @@ export default function CustomizeModal({ item, tableLabel, onClose, onConfirm })
     return () => {
       cancelled = true
     }
-  }, [item.id])
+  }, [item.id, toast])
 
   // Só uma estimativa para exibir no botão — o preço final de verdade é
   // sempre recalculado pelo backend quando o pedido é enviado.
@@ -39,7 +42,22 @@ export default function CustomizeModal({ item, tableLabel, onClose, onConfirm })
       selectedAddons.reduce((sum, a) => sum + Number(a.price), 0)) *
     quantity
 
+  // Fecha com Esc e trava a rolagem da página de fundo enquanto o modal está aberto.
+  React.useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
   function toggleAddon(id) {
+
     setSelected((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
@@ -53,242 +71,105 @@ export default function CustomizeModal({ item, tableLabel, onClose, onConfirm })
   }
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true">
-      <div className="sheet">
-        <header>
-          <button type="button" className="back" onClick={onClose}>
-            ← Voltar
-          </button>
-          {tableLabel && <span className="mesa">{tableLabel}</span>}
-        </header>
-
-        {item.photoUrl ? (
-          <div className="hero">
-            <img src={item.photoUrl} alt="" />
+    <div className="sheet-overlay" onClick={onClose}>
+      <div
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={item.name}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sheet-scroll">
+          <div className={`sheet-hero ${item.photoUrl ? '' : 'no-photo'}`}>
+            {item.photoUrl ? (
+              <img src={item.photoUrl} alt="" />
+            ) : (
+              <span className="hero-letter" aria-hidden="true">{item.name?.[0]}</span>
+            )}
+            <button type="button" className="icon-btn sheet-close" onClick={onClose} aria-label="Fechar">
+              <Icon name="x" size={20} />
+            </button>
+            {tableLabel && <span className="table-chip sheet-table">{tableLabel}</span>}
           </div>
-        ) : (
-          <div className="hero placeholder">FOTO DO PRATO</div>
-        )}
 
-        <div className="title-row">
-          <h2>{item.name}</h2>
-          {item.isOnPromo ? (
-            <div className="price-stack">
-              <s>{formatPrice(item.originalPrice)}</s>
-              <strong className="promo">{formatPrice(item.price)}</strong>
+          <div className="sheet-content">
+            <div className="sheet-title">
+              <h2 className="display">{item.name}</h2>
+              {item.isOnPromo ? (
+                <div className="price-stack">
+                  <span className="price-promo">{formatPrice(item.price)}</span>
+                  <span className="price-old">{formatPrice(item.originalPrice)}</span>
+                </div>
+              ) : (
+                <strong className="sheet-price">{formatPrice(item.price)}</strong>
+              )}
             </div>
-          ) : (
-            <strong>{formatPrice(item.price)}</strong>
-          )}
+            {item.description && <p className="sheet-desc">{item.description}</p>}
+
+            {loading && <p className="muted sheet-loading">Carregando opções…</p>}
+
+            {!loading && addons.length > 0 && (
+              <fieldset className="addons">
+                <legend>
+                  <span>Adicionais</span>
+                  <span className="muted">opcional</span>
+                </legend>
+                {addons.map((addon) => {
+                  const on = Boolean(selected[addon.id])
+                  return (
+                    <label key={addon.id} className={`addon ${on ? 'on' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => toggleAddon(addon.id)}
+                      />
+                      <span className="addon-check" aria-hidden="true">
+                        <Icon name="check" size={14} />
+                      </span>
+                      <span className="addon-name">{addon.name}</span>
+                      <span className="addon-price">+ {formatPrice(addon.price)}</span>
+                    </label>
+                  )
+                })}
+              </fieldset>
+            )}
+
+            <label className="field sheet-notes">
+              <span>
+                <Icon name="message" size={14} /> Alguma observação?
+              </span>
+              <textarea
+                className="input"
+                rows={2}
+                placeholder="Ex.: sem cebola, ponto da carne…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </label>
+          </div>
         </div>
-        {item.description && <p className="desc">{item.description}</p>}
 
-        {loading && <p className="muted">Carregando opções…</p>}
-        {error && <p className="err">{error}</p>}
-
-        {!loading && addons.length > 0 && (
-          <fieldset>
-            <legend>Adicionais</legend>
-            {addons.map((addon) => (
-              <label key={addon.id} className="check">
-                <span>{addon.name}</span>
-                <span className="right">
-                  + {formatPrice(addon.price)}&nbsp;
-                  <input
-                    type="checkbox"
-                    checked={Boolean(selected[addon.id])}
-                    onChange={() => toggleAddon(addon.id)}
-                  />
-                </span>
-              </label>
-            ))}
-          </fieldset>
-        )}
-
-        <label className="block">
-          Observação
-          <textarea
-            rows={2}
-            placeholder="Ex.: sem cebola"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </label>
-
-        <div className="footer-row">
-          <div className="qty">
-            <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
-              −
+        <div className="sheet-footer">
+          <div className="stepper">
+            <button
+              type="button"
+              aria-label="Diminuir"
+              disabled={quantity <= 1}
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            >
+              <Icon name="minus" size={16} />
             </button>
             <span>{quantity}</span>
-            <button type="button" onClick={() => setQuantity((q) => q + 1)}>
-              +
+            <button type="button" aria-label="Aumentar" onClick={() => setQuantity((q) => q + 1)}>
+              <Icon name="plus" size={16} />
             </button>
           </div>
-          <button type="button" className="primary" onClick={handleConfirm}>
-            Adicionar · {formatPrice(estimate)}
+          <button type="button" className="btn sheet-add" onClick={handleConfirm}>
+            <span>Adicionar</span>
+            <span>{formatPrice(estimate)}</span>
           </button>
         </div>
       </div>
-
-      <style>{`
-        .overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.55);
-          display: grid;
-          align-items: end;
-          z-index: 40;
-        }
-        .sheet {
-          background: var(--bg-elevated);
-          border-radius: 12px 12px 0 0;
-          padding: 0.85rem 1rem 1.25rem;
-          max-height: 90vh;
-          overflow: auto;
-        }
-        header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.65rem;
-        }
-        .back {
-          border: none;
-          background: transparent;
-          color: var(--text);
-          font-weight: 600;
-          cursor: pointer;
-          padding: 0;
-        }
-        .mesa {
-          font-family: var(--mono, ui-monospace, monospace);
-          font-size: 0.7rem;
-          text-transform: uppercase;
-          color: var(--muted);
-        }
-        .hero {
-          height: 104px;
-          border: 1px solid var(--border);
-          overflow: hidden;
-          margin-bottom: 0.75rem;
-          display: grid;
-          place-items: center;
-          font-size: 0.7rem;
-          color: var(--muted);
-          font-family: var(--mono, ui-monospace, monospace);
-        }
-        .hero img { width: 100%; height: 100%; object-fit: cover; }
-        .hero.placeholder {
-          background: repeating-linear-gradient(
-            45deg, var(--border), var(--border) 5px, transparent 5px, transparent 10px
-          );
-        }
-        .title-row {
-          display: flex;
-          justify-content: space-between;
-          gap: 0.75rem;
-          align-items: baseline;
-        }
-        .title-row h2 { margin: 0; font-size: 1.05rem; }
-        .price-stack {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 0.1rem;
-        }
-        .price-stack s {
-          font-size: 0.75rem;
-          color: var(--muted);
-        }
-        .price-stack .promo {
-          color: #3ecf7a;
-          font-size: 1.05rem;
-        }
-        .desc {
-          margin: 0.35rem 0 0;
-          font-size: 0.8rem;
-          color: var(--muted);
-          line-height: 1.45;
-        }
-        fieldset { border: none; margin: 1rem 0 0; padding: 0; }
-        legend {
-          font-family: var(--mono, ui-monospace, monospace);
-          font-size: 0.7rem;
-          color: var(--muted);
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          margin-bottom: 0.4rem;
-        }
-        .check {
-          display: flex;
-          justify-content: space-between;
-          gap: 0.75rem;
-          font-size: 0.88rem;
-          padding: 0.35rem 0;
-        }
-        .right {
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-          color: var(--muted);
-          white-space: nowrap;
-        }
-        .block {
-          display: flex;
-          flex-direction: column;
-          gap: 0.35rem;
-          margin-top: 0.85rem;
-          font-family: var(--mono, ui-monospace, monospace);
-          font-size: 0.7rem;
-          color: var(--muted);
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-        }
-        textarea {
-          border: 1px solid var(--border);
-          border-radius: 2px;
-          padding: 0.55rem;
-          font-family: inherit;
-          font-size: 0.88rem;
-          text-transform: none;
-          letter-spacing: normal;
-          color: var(--text);
-          background: var(--bg);
-        }
-        .footer-row {
-          display: flex;
-          align-items: center;
-          gap: 0.65rem;
-          margin-top: 1rem;
-        }
-        .qty {
-          display: flex;
-          align-items: center;
-          gap: 0.45rem;
-        }
-        .qty button {
-          width: 28px;
-          height: 28px;
-          border: 1px solid var(--border);
-          background: transparent;
-          border-radius: 2px;
-          color: var(--text);
-          cursor: pointer;
-        }
-        .primary {
-          flex: 1;
-          border: none;
-          background: var(--text);
-          color: var(--bg);
-          font-weight: 700;
-          padding: 0.7rem 0.85rem;
-          border-radius: 4px;
-          cursor: pointer;
-        }
-        .muted { color: var(--muted); font-size: 0.85rem; }
-        .err { color: var(--danger); }
-      `}</style>
     </div>
   )
 }

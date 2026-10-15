@@ -1,0 +1,82 @@
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.reports-grid > .card { margin-bottom: 0; }
+.small { font-size: 0.78rem; }
+
+/* Ranking (barras horizontais, série única) */
+.rank {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1.25rem 1rem;
+}
+.rank li {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.rank li:last-child { border-bottom: none; }
+.rank-pos {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.rank li:first-child .rank-pos { background: var(--accent); color: #fff; }
+.rank-body { flex: 1; min-width: 0; display: grid; gap: 0.3rem; }
+.rank-line { display: flex; justify-content: space-between; gap: 0.75rem; }
+.rank-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-qty { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rank-track { height: 8px; border-radius: 4px; background: var(--bg); }
+.rank-track i {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+.rank li:hover .rank-track i { background: var(--accent-hover); }
+.rank-rev { font-size: 0.78rem; color: var(--muted); }
+
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1.25rem 1rem;
+}
+.status-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.status-list li:last-child { border-bottom: none; }
+.status-list strong { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 860px) {
+  .reports-grid { grid-template-columns: 1fr; }
+}

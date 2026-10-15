@@ -1,5 +1,7 @@
 // Camada única de acesso à API do backend para o painel admin: guarda a
 // sessão de login (token JWT) e centraliza todas as chamadas HTTP.
+import { apiErrorFromResponse, networkError } from './apiError'
+
 const TOKEN_KEY = 'goserv_admin_token'
 const USER_KEY = 'goserv_admin_user'
 
@@ -49,10 +51,16 @@ async function request(path, options = {}) {
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetch(`${API}${path}`, {
-    ...options,
-    headers,
-  })
+  let res
+  try {
+    res = await fetch(`${API}${path}`, {
+      ...options,
+      headers,
+    })
+  } catch {
+    // fetch só rejeita quando nem chegou resposta (API fora do ar, sem rede).
+    throw networkError()
+  }
 
   if (res.status === 401) {
     clearSession()
@@ -65,7 +73,7 @@ async function request(path, options = {}) {
 
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
-    throw new Error(body.message || `Erro ${res.status}`)
+    throw apiErrorFromResponse(res.status, body, getStoredUser()?.role)
   }
   return body
 }
@@ -74,6 +82,7 @@ export const api = {
   login: (payload) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request('/auth/me'),
+  getRestaurant: () => request('/restaurant'),
 
   getCategories: () => request('/categories'),
   createCategory: (payload) =>
@@ -98,11 +107,16 @@ export const api = {
     const body = new FormData()
     body.append('file', file)
 
-    const res = await fetch(`${API}/menuitems/${id}/photo`, {
-      method: 'POST',
-      headers,
-      body,
-    })
+    let res
+    try {
+      res = await fetch(`${API}/menuitems/${id}/photo`, {
+        method: 'POST',
+        headers,
+        body,
+      })
+    } catch {
+      throw networkError()
+    }
 
     if (res.status === 401) {
       clearSession()
@@ -110,7 +124,7 @@ export const api = {
     }
 
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.message || `Erro ${res.status}`)
+    if (!res.ok) throw apiErrorFromResponse(res.status, data, getStoredUser()?.role)
     return data
   },
   deleteMenuItemPhoto: (id) =>

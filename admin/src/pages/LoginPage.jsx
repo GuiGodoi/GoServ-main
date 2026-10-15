@@ -1,17 +1,23 @@
 import React from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { Icon, useToast } from '../components/ui'
+import './LoginPage.css'
 
 // Atalhos de demo: preenchem o formulário com as credenciais dos usuários
 // criados pelo seed do banco (ver backend/Data/DbSeeder.cs), só para agilizar testes.
 const PRESETS = {
   admin: {
     label: 'Admin',
+    hint: 'Acesso completo',
+    icon: 'user',
     email: 'admin@goserv.local',
     password: 'admin123',
   },
   kitchen: {
     label: 'Cozinha',
+    hint: 'Pedidos e mesas',
+    icon: 'flame',
     email: 'cozinha@goserv.local',
     password: 'cozinha123',
   },
@@ -19,12 +25,12 @@ const PRESETS = {
 
 export default function LoginPage() {
   const { login, isAuthenticated, ready } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [preset, setPreset] = React.useState('')
-  const [error, setError] = React.useState('')
   const [busy, setBusy] = React.useState(false)
 
   // Se o usuário tentou acessar uma página protegida sem estar logado, o
@@ -41,18 +47,16 @@ export default function LoginPage() {
     setPreset(key)
     setEmail(p.email)
     setPassword(p.password)
-    setError('')
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setBusy(true)
-    setError('')
     try {
       await login(email.trim(), password)
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err.message || 'Falha no login')
+      toast.error(err, { title: 'Não foi possível entrar' })
     } finally {
       setBusy(false)
     }
@@ -63,139 +67,92 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <form className="login-card" onSubmit={handleSubmit}>
-        <p className="brand">GoServ</p>
-        <h1>Acesso interno</h1>
-        <p className="sub">Escolha um perfil de demo ou digite as credenciais.</p>
-
-        <div className="presets" role="group" aria-label="Perfis de demo">
-          {Object.entries(PRESETS).map(([key, p]) => (
-            <button
-              key={key}
-              type="button"
-              className={`preset ${preset === key ? 'on' : ''}`}
-              onClick={() => applyPreset(key)}
-            >
-              {p.label}
-            </button>
-          ))}
+      <aside className="login-hero">
+        <div className="hero-brand">
+          <span className="brand-mark">
+            <Icon name="utensils" size={20} />
+          </span>
+          <span>GoServ</span>
         </div>
+        <div className="hero-copy">
+          <h2>Seu restaurante, do QR code à cozinha.</h2>
+          <p>
+            Cardápio digital, pedidos em tempo real, mesas e relatórios num só
+            painel.
+          </p>
+        </div>
+        <ul className="hero-points">
+          <li><Icon name="qr" size={16} /> Pedido direto da mesa via QR</li>
+          <li><Icon name="flame" size={16} /> Quadro da cozinha ao vivo</li>
+          <li><Icon name="chart" size={16} /> Vendas e ticket médio do dia</li>
+        </ul>
+      </aside>
 
-        {error && <p className="error">{error}</p>}
+      <main className="login-main">
+        <form className="login-card" onSubmit={handleSubmit}>
+          <div className="login-head">
+            <h1>Entrar no painel</h1>
+            <p>Use um perfil de demonstração ou suas credenciais.</p>
+          </div>
 
-        <label>
-          E-mail
-          <input
-            type="email"
-            required
-            autoComplete="username"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              setPreset('')
-            }}
-          />
-        </label>
-        <label>
-          Senha
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              setPreset('')
-            }}
-          />
-        </label>
+          <div className="presets" role="group" aria-label="Perfis de demo">
+            {Object.entries(PRESETS).map(([key, p]) => (
+              <button
+                key={key}
+                type="button"
+                className={`preset ${preset === key ? 'on' : ''}`}
+                onClick={() => applyPreset(key)}
+              >
+                <span className="preset-icon">
+                  <Icon name={p.icon} size={16} />
+                </span>
+                <span>
+                  <strong>{p.label}</strong>
+                  <small>{p.hint}</small>
+                </span>
+              </button>
+            ))}
+          </div>
 
-        <button type="submit" className="submit" disabled={busy}>
-          {busy ? 'Entrando…' : 'Entrar'}
-        </button>
-      </form>
+          <div className="divider"><span>ou</span></div>
 
-      <style>{`
-        .login-page {
-          min-height: 100vh;
-          display: grid;
-          place-items: center;
-          padding: 1.5rem;
-          background:
-            radial-gradient(ellipse 70% 50% at 20% 0%, #dfe8df, transparent),
-            var(--bg);
-        }
-        .login-card {
-          width: min(100%, 400px);
-          background: var(--panel);
-          border: 1px solid var(--line);
-          border-radius: 14px;
-          padding: 1.6rem 1.4rem 1.4rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-        .brand {
-          margin: 0;
-          font-weight: 700;
-          font-size: 1.5rem;
-          letter-spacing: -0.03em;
-          color: var(--accent);
-        }
-        h1 { margin: 0; font-size: 1.2rem; }
-        .sub {
-          margin: 0;
-          color: var(--muted);
-          font-size: 0.88rem;
-          line-height: 1.45;
-        }
-        .presets {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0.5rem;
-        }
-        .preset {
-          border: 1px solid var(--line);
-          background: #fff;
-          color: var(--ink);
-          padding: 0.55rem 0.75rem;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .preset.on {
-          border-color: var(--accent);
-          background: rgba(31, 107, 74, 0.1);
-          color: var(--accent);
-        }
-        .preset:hover { border-color: var(--accent); }
-        .error { margin: 0; color: var(--danger); font-size: 0.9rem; }
-        label {
-          display: flex;
-          flex-direction: column;
-          gap: 0.3rem;
-          font-size: 0.85rem;
-          font-weight: 500;
-        }
-        input {
-          border: 1px solid var(--line);
-          border-radius: 8px;
-          padding: 0.6rem 0.7rem;
-          background: #fff;
-        }
-        .submit {
-          margin-top: 0.35rem;
-          border: none;
-          background: var(--accent);
-          color: #fff;
-          padding: 0.65rem 1rem;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-        }
-        .submit:hover { background: var(--accent-hover); }
-        .submit:disabled { opacity: 0.65; cursor: wait; }
-      `}</style>
+          <label className="field">
+            <span>E-mail</span>
+            <input
+              className="input"
+              type="email"
+              required
+              autoComplete="username"
+              placeholder="voce@restaurante.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setPreset('')
+              }}
+            />
+          </label>
+          <label className="field">
+            <span>Senha</span>
+            <input
+              className="input"
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                setPreset('')
+              }}
+            />
+          </label>
+
+          <button type="submit" className="btn btn-lg btn-block" disabled={busy}>
+            {busy ? 'Entrando…' : 'Entrar'}
+            {!busy && <Icon name="arrowRight" size={16} />}
+          </button>
+        </form>
+      </main>
     </div>
   )
 }

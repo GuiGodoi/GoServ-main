@@ -1,102 +1,281 @@
+/* ==========================================================================
+   GoServ Client — design system (tema escuro "bistrô")
+   Tokens + componentes base. Estilos de cada tela ficam em pages/*.css
+   e components/*.css.
+   ========================================================================== */
+
 :root {
-  --bg: #1a1510;
-  --bg-elevated: #2a221a;
-  --surface: #342a20;
+  --bg: #15110d;
+  --bg-elevated: #1f1913;
+  --surface: #2a221a;
+  --surface-2: #342a20;
   --text: #f5efe6;
-  --muted: #b8a99a;
+  --muted: #a99a8a;
+  --faint: #6f6356;
   --accent: #e8a54b;
-  --accent-soft: rgba(232, 165, 75, 0.15);
+  --accent-hover: #f0b562;
+  --accent-ink: #1a1208;
+  --accent-soft: rgba(232, 165, 75, 0.14);
+  --success: #5fcf8a;
+  --success-soft: rgba(95, 207, 138, 0.14);
   --border: rgba(245, 239, 230, 0.08);
-  --danger: #c45c4a;
-  --radius: 14px;
+  --border-strong: rgba(245, 239, 230, 0.16);
+  --danger: #e2735f;
+  --danger-soft: rgba(226, 115, 95, 0.14);
+
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
   --font: 'DM Sans', system-ui, sans-serif;
   --display: 'Fraunces', Georgia, serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  color-scheme: dark;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+
+html { -webkit-tap-highlight-color: transparent; }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--text);
   background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #3d2e1f 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, #2c3a2a 0%, transparent 45%),
+    radial-gradient(ellipse 80% 50% at 10% -10%, #3a2a1a 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, #24301f 0%, transparent 45%),
     var(--bg);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 
-button {
-  font-family: inherit;
+button, input, textarea { font: inherit; color: inherit; }
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+img { max-width: 100%; display: block; }
+.icon { flex: none; display: block; }
+
+/* Container padrão das telas (mobile first) */
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 max(1.1rem, env(safe-area-inset-left)) 3rem max(1.1rem, env(safe-area-inset-right));
 }
 
-img {
-  max-width: 100%;
-  display: block;
+.display {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-/* Modo kiosk (tablet no balcão / mesa) — mesmos artefatos, alvos maiores */
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------- Botões ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
+}
+.btn:hover { background: var(--accent-hover); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.btn-block { width: 100%; }
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn-secondary:hover { background: var(--surface-2); }
+.btn-ghost { background: transparent; color: var(--text); }
+.btn-ghost:hover { background: var(--surface); }
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Stepper (− 1 +) ---------- */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.stepper button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.stepper button:hover { background: var(--surface-2); }
+.stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+.stepper span {
+  min-width: 26px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Campos ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.field > span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input::placeholder { color: var(--faint); }
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+textarea.input { resize: none; min-height: 84px; line-height: 1.45; }
+
+/* ---------- Cartões / avisos ---------- */
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.notice {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.8rem 0.95rem;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.notice .icon { margin-top: 1px; }
+.notice-error { background: var(--danger-soft); color: #f2a596; }
+.notice-info { background: var(--accent-soft); color: #f1c58a; }
+
+.price-old { color: var(--faint); text-decoration: line-through; font-size: 0.85em; }
+.price-promo { color: var(--success); font-weight: 700; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.pill-promo { background: var(--success); color: #0d2416; }
+.pill-muted { background: var(--surface); color: var(--muted); }
+
+.muted { color: var(--muted); }
+
+/* Estado de tela inteira (erro, carregando, vazio) */
+.screen-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  padding: 3.5rem 1rem 2rem;
+  color: var(--muted);
+}
+.screen-state .state-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 0.4rem;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+}
+.screen-state h2 { color: var(--text); font-family: var(--display); font-size: 1.35rem; font-weight: 600; }
+.screen-state p { max-width: 32ch; }
+.screen-state .btn { margin-top: 0.75rem; }
+
+/* ---------- Modo kiosk (tablet no balcão / mesa) ---------- */
 html.kiosk,
 body.kiosk {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
 }
-
-body.kiosk {
-  cursor: default;
-}
-
-body.kiosk button,
-body.kiosk .tab,
-body.kiosk .add,
-body.kiosk .cart-cta,
-body.kiosk .primary {
-  min-height: 48px;
-  font-size: 1.05rem;
-}
-
+body.kiosk { cursor: default; }
 body.kiosk .menu-page,
 body.kiosk .page {
   max-width: 900px;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
 }
-
-.kiosk-badge {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.15rem 0.45rem;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--bg);
-  background: var(--accent);
-  vertical-align: middle;
-}
+body.kiosk .btn { min-height: 56px; font-size: 1.1rem; }
 
 /* Mobile / celular */
 @media (max-width: 640px) {
-  body {
-    font-size: 16px;
-  }
-
-  input,
-  select,
-  textarea,
-  button {
+  input, select, textarea, button {
     font-size: 16px; /* evita zoom automático no iOS */
   }
 }
 
-@supports (padding: max(0px)) {
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-
-

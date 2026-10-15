@@ -1,10 +1,14 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { fetchRestaurant } from '../services/api'
+import Icon from './Icon'
+import './ClientTopBar.css'
 
 /**
- * Barra superior do wireframe: nome do estabelecimento + MESA XX em todas as telas do client.
+ * Barra superior fixa: nome do estabelecimento (ou título da tela) + mesa.
+ * Com "backTo", mostra um botão de voltar à esquerda.
  */
-export default function ClientTopBar({ tableLabel, title }) {
+export default function ClientTopBar({ tableLabel, title, backTo }) {
   // "GoServ" é só o valor inicial exibido enquanto o nome real do
   // estabelecimento (vindo da API) ainda não chegou.
   const [name, setName] = React.useState('GoServ')
@@ -23,33 +27,24 @@ export default function ClientTopBar({ tableLabel, title }) {
 
   return (
     <header className="client-top">
-      <div className="left">
-        <strong>{title || name}</strong>
+      <div className="client-top-inner">
+        {backTo ? (
+          <Link to={backTo} className="icon-btn" aria-label="Voltar">
+            <Icon name="back" size={20} />
+          </Link>
+        ) : (
+          <span className="client-mark" aria-hidden="true">
+            <Icon name="utensils" size={17} />
+          </span>
+        )}
+        <strong className="client-title">{title || name}</strong>
+        {tableLabel && (
+          <span className="table-chip">
+            <Icon name="table" size={14} />
+            {tableLabel}
+          </span>
+        )}
       </div>
-      {tableLabel && <div className="mesa">{tableLabel}</div>}
-      <style>{`
-        .client-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem 0;
-          border-bottom: 1px solid var(--border);
-          margin-bottom: 0.85rem;
-        }
-        .client-top .left strong {
-          font-size: 0.95rem;
-          font-weight: 700;
-        }
-        .client-top .mesa {
-          font-family: var(--mono, ui-monospace, monospace);
-          font-size: 0.72rem;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          color: var(--muted);
-          white-space: nowrap;
-        }
-      `}</style>
     </header>
   )
 }

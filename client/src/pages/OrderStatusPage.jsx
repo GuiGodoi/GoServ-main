@@ -3,7 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { fetchOrder } from '../services/api'
 import { connectOrderHub } from '../services/orderHub'
 import ClientTopBar from '../components/ClientTopBar'
+import Icon from '../components/Icon'
+import { useToast } from '../components/Toast'
 import { formatPrice, formatClock } from '../utils'
+import './OrderStatusPage.css'
 
 const STATUS_LABEL = {
   AwaitingPayment: 'Aguardando pagamento',
@@ -52,6 +55,7 @@ export default function OrderStatusPage() {
   const navigate = useNavigate()
   const [order, setOrder] = React.useState(null)
   const [error, setError] = React.useState('')
+  const toast = useToast()
   const [live, setLive] = React.useState('connecting')
   const readyAlertSent = React.useRef(false)
 
@@ -65,10 +69,12 @@ export default function OrderStatusPage() {
     let connection
 
     async function boot() {
+      let loaded = false
       try {
         const initial = await fetchOrder(publicId)
         if (cancelled) return
         setOrder(initial)
+        loaded = true
 
         // Essa tela é só para pedido já pago; se ainda estiver aguardando
         // pagamento, manda de volta pra tela de pagamento.
@@ -91,9 +97,15 @@ export default function OrderStatusPage() {
         await connection.invoke('WatchOrder', publicId)
         if (!cancelled) setLive('online')
       } catch (e) {
-        if (!cancelled) {
+        if (cancelled) return
+        setLive('offline')
+        // Pedido carregou mas o "ao vivo" falhou: mantém a tela e só avisa.
+        if (loaded) {
+          toast.error('Recarregue a página para ver o status mais recente do pedido.', {
+            title: 'Atualização ao vivo indisponível',
+          })
+        } else {
           setError(e.message || 'Não foi possível acompanhar o pedido')
-          setLive('offline')
         }
       }
     }
@@ -103,7 +115,7 @@ export default function OrderStatusPage() {
       cancelled = true
       connection?.stop()
     }
-  }, [publicId, navigate, payPath])
+  }, [publicId, navigate, payPath, toast])
 
   // Dispara uma notificação do navegador quando o pedido fica pronto (só uma
   // vez por pedido, controlado pelo "readyAlertSent" — útil se a aba estiver em segundo plano).
@@ -131,11 +143,17 @@ export default function OrderStatusPage() {
   if (error) {
     return (
       <div className="page">
-        <p className="err">{error}</p>
-        <button type="button" className="primary" onClick={() => navigate(menuPath)}>
-          Voltar ao cardápio
-        </button>
-        <Styles />
+        <ClientTopBar title="Seu pedido" />
+        <div className="screen-state">
+          <span className="state-icon">
+            <Icon name="alert" size={28} />
+          </span>
+          <h2>Não foi possível acompanhar</h2>
+          <p>{error}</p>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate(menuPath)}>
+            Voltar ao cardápio
+          </button>
+        </div>
       </div>
     )
   }
@@ -143,198 +161,92 @@ export default function OrderStatusPage() {
   if (!order) {
     return (
       <div className="page">
-        <p className="muted">Carregando pedido…</p>
-        <Styles />
+        <ClientTopBar title="Seu pedido" />
+        <p className="muted status-loading">Carregando pedido…</p>
       </div>
     )
   }
 
   const isReady = order.status === 'Ready'
-  const isDone = order.status === 'Delivered' || order.status === 'Cancelled'
+  const isCancelled = order.status === 'Cancelled'
+  const isDone = order.status === 'Delivered' || isCancelled
   const paidAt = formatClock(order.createdAt)
 
   return (
-    <div className={`page ${isReady ? 'ready-mode' : ''}`}>
+    <div className={`page status-page ${isReady ? 'ready-mode' : ''}`}>
       <ClientTopBar
         tableLabel={order.tableLabel}
         title={`Pedido #${String(order.id).padStart(4, '0')}`}
       />
 
       {isReady && (
-        <div className="banner" role="status" aria-live="assertive">
-          <p className="banner-title">Seu pedido está pronto!</p>
-          <p className="banner-sub">
-            {order.tableLabel
-              ? `Retire na ${order.tableLabel}`
-              : `Senha ${order.id}`}
-          </p>
+        <div className="ready-banner" role="status" aria-live="assertive">
+          <span className="ready-icon">
+            <Icon name="bell" size={24} />
+          </span>
+          <div>
+            <p className="ready-title">Seu pedido está pronto!</p>
+            <p className="ready-sub">
+              {order.tableLabel ? `Retire na ${order.tableLabel}` : `Senha ${order.id}`}
+            </p>
+          </div>
         </div>
       )}
 
-      <div className="senha-block">
-        <div className="senha-label">SENHA</div>
-        <div className="senha">{order.id}</div>
-        <p className="meta">
-          {formatPrice(order.total)}
-          <span className={`dot ${live}`}>
-            {live === 'online' ? 'ao vivo' : live}
+      <div className="ticket-card">
+        <span className="eyebrow">Sua senha</span>
+        <div className="ticket-number display">{order.id}</div>
+        <div className="ticket-meta">
+          <span>{formatPrice(order.total)}</span>
+          <span className={`live-chip ${live}`}>
+            <span className="live-dot" />
+            {live === 'online' ? 'Ao vivo' : live === 'connecting' ? 'Conectando' : 'Offline'}
           </span>
-        </p>
+        </div>
       </div>
 
-      <div className="timeline">
-        {TRACK_STEPS.map((step) => {
-          const state = stepState(order.status, step.key)
-          const mark =
-            state === 'done' ? '✓' : state === 'current' ? '●' : '○'
-          return (
-            <div key={step.key} className={`row ${state}`}>
-              <span>
-                {mark} &nbsp;{step.label}
-              </span>
-              {(state === 'done' || state === 'current') && (
-                <span className="clock">{paidAt}</span>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {order.status === 'Cancelled' && (
-        <p className="err">Este pedido foi cancelado.</p>
+      {isCancelled ? (
+        <div className="notice notice-error">
+          <Icon name="alert" size={16} />
+          Este pedido foi cancelado. Fale com um atendente se precisar de ajuda.
+        </div>
+      ) : (
+        <ol className="timeline">
+          {TRACK_STEPS.map((step, i) => {
+            const state = stepState(order.status, step.key)
+            return (
+              <li key={step.key} className={`step ${state}`}>
+                <span className="step-dot">
+                  {state === 'done' && <Icon name="check" size={14} />}
+                  {state === 'current' && <span className="step-pulse" />}
+                </span>
+                <div className="step-body">
+                  <span className="step-label">{step.label}</span>
+                  {/* Só o horário do pedido é conhecido; os demais passos não têm hora registrada. */}
+                  {i === 0 && state !== 'todo' && <span className="step-time">{paidAt}</span>}
+                </div>
+              </li>
+            )
+          })}
+        </ol>
       )}
 
-      <div className="hint-box">
-        Deixe esta tela aberta. Avisaremos aqui quando o pedido ficar pronto.
-      </div>
-
-      {!isDone && (
-        <p className="hint-live">
-          Atualiza sozinha pelo SignalR
-          {STATUS_LABEL[order.status] ? ` · ${STATUS_LABEL[order.status]}` : ''}.
-        </p>
+      {!isDone && !isReady && (
+        <div className="notice notice-info">
+          <Icon name="bell" size={16} />
+          <span>
+            Pode deixar esta tela aberta — ela atualiza sozinha e avisa quando o
+            pedido ficar pronto
+            {STATUS_LABEL[order.status] ? ` (agora: ${STATUS_LABEL[order.status].toLowerCase()})` : ''}.
+          </span>
+        </div>
       )}
 
       {isDone && (
-        <button type="button" className="primary" onClick={() => navigate(menuPath)}>
+        <button type="button" className="btn btn-block new-order" onClick={() => navigate(menuPath)}>
           Fazer novo pedido
         </button>
       )}
-
-      <Styles />
     </div>
-  )
-}
-
-function Styles() {
-  return (
-    <style>{`
-      .page {
-        max-width: 420px;
-        margin: 0 auto;
-        padding: 0.75rem 1.15rem 3rem;
-      }
-      .senha-block {
-        text-align: center;
-        padding: 1.25rem 0 1.5rem;
-        border-bottom: 1px solid var(--border);
-      }
-      .senha-label {
-        font-family: var(--mono, ui-monospace, monospace);
-        font-size: 0.72rem;
-        color: var(--muted);
-        letter-spacing: 0.08em;
-      }
-      .senha {
-        font-size: 3.2rem;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1.05;
-        margin: 0.15rem 0;
-      }
-      .meta {
-        margin: 0.35rem 0 0;
-        color: var(--muted);
-        display: flex;
-        gap: 0.5rem;
-        justify-content: center;
-        align-items: center;
-        font-size: 0.85rem;
-      }
-      .dot {
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 0.1rem 0.4rem;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-      }
-      .dot.online {
-        color: var(--accent);
-        border-color: var(--accent);
-      }
-      .timeline {
-        padding-top: 1rem;
-      }
-      .timeline .row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.88rem;
-        padding: 0.45rem 0;
-        color: var(--muted);
-      }
-      .timeline .row.done,
-      .timeline .row.current {
-        color: var(--text);
-      }
-      .timeline .row.current {
-        font-weight: 700;
-      }
-      .clock {
-        font-family: var(--mono, ui-monospace, monospace);
-        font-size: 0.75rem;
-        color: var(--muted);
-      }
-      .hint-box {
-        margin-top: 1.1rem;
-        border: 1px solid var(--border);
-        padding: 0.75rem;
-        font-size: 0.8rem;
-        color: var(--muted);
-        line-height: 1.45;
-        border-radius: 4px;
-      }
-      .hint-live {
-        margin-top: 0.75rem;
-        font-size: 0.78rem;
-        color: var(--muted);
-      }
-      .banner {
-        margin: 0.5rem 0 0.75rem;
-        padding: 1rem;
-        border-radius: 8px;
-        background: var(--accent);
-        color: #1a1510;
-      }
-      .banner-title {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: 800;
-      }
-      .banner-sub { margin: 0.25rem 0 0; font-weight: 600; }
-      .err { color: var(--danger); }
-      .muted { color: var(--muted); }
-      .primary {
-        width: 100%;
-        margin-top: 1rem;
-        border: none;
-        background: var(--text);
-        color: var(--bg);
-        font-weight: 700;
-        padding: 0.85rem;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-    `}</style>
   )
 }

@@ -1,6 +1,7 @@
 import React from 'react'
 import Cropper from 'react-easy-crop'
 import { getCroppedImageBlob } from '../../utils/cropImage'
+import Icon from './Icon'
 
 /**
  * Modal de recorte 1:1 (react-easy-crop): zoom, pan e rotação.
@@ -36,9 +37,9 @@ export default function ImageCropModal({ imageSrc, onCancel, onConfirm }) {
     <div className="crop-overlay" role="dialog" aria-modal="true" aria-label="Recortar foto">
       <div className="crop-modal">
         <header>
-          <h2>Recortar foto (1:1)</h2>
-          <button type="button" className="x" onClick={onCancel} aria-label="Fechar">
-            ×
+          <h2>Ajustar foto</h2>
+          <button type="button" className="icon-btn" onClick={onCancel} aria-label="Fechar">
+            <Icon name="x" size={18} />
           </button>
         </header>
 
@@ -81,10 +82,10 @@ export default function ImageCropModal({ imageSrc, onCancel, onConfirm }) {
             />
           </label>
           <div className="rot-btns">
-            <button type="button" className="ghost" onClick={() => setRotation((r) => (r + 270) % 360)}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRotation((r) => (r + 270) % 360)}>
               ↺ 90°
             </button>
-            <button type="button" className="ghost" onClick={() => setRotation((r) => (r + 90) % 360)}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRotation((r) => (r + 90) % 360)}>
               ↻ 90°
             </button>
           </div>
@@ -93,10 +94,10 @@ export default function ImageCropModal({ imageSrc, onCancel, onConfirm }) {
         {error && <p className="err">{error}</p>}
 
         <footer>
-          <button type="button" className="ghost" onClick={onCancel} disabled={busy}>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy}>
             Cancelar
           </button>
-          <button type="button" className="ok" onClick={handleConfirm} disabled={busy}>
+          <button type="button" className="btn" onClick={handleConfirm} disabled={busy}>
             {busy ? 'Aplicando…' : 'Usar recorte'}
           </button>
         </footer>
