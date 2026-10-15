@@ -81,6 +81,7 @@ GoServ/
 │   ├── db/                   # Snapshot PostgreSQL compartilhado
 │   └── Migrations/
 ├── docs/
+│   ├── AI_CHANGELOG.md       # Registro obrigatório de mudanças feitas por IA
 │   ├── ARCHITECTURE.md
 │   └── ROADMAP.md
 ├── scripts/
@@ -188,3 +189,4 @@ Credenciais do banco (dev): `localhost:5433` / `goserv` / `postgres` / `postgres
 - Decisões: [`docs/DECISIONS.md`](docs/DECISIONS.md)  
 - Cronograma MVP: [`docs/ROADMAP.md`](docs/ROADMAP.md)  
 - Scripts: [`scripts/README.md`](scripts/README.md)
+- **Registro de mudanças feitas por IA** (obrigatório para qualquer IA): [`docs/AI_CHANGELOG.md`](docs/AI_CHANGELOG.md), regra em [`AGENTS.md`](AGENTS.md)

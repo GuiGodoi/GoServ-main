@@ -42,3 +42,16 @@ Integração real Mercado Pago continua opcional para a aula 7.
 
 Agregações diárias em UTC sobre pedidos **já pagos** (exclui `AwaitingPayment` e cancelados).
 Fuso do estabelecimento pode ser parametrizado depois.
+
+## Visual e tratamento de erros no front
+
+- **CSS**: tokens e componentes base em `styles.css` de cada app; estilo de tela em `*.css` ao lado do componente.
+  Nada de `<style>` inline com seletores globais (`h1`, `input`, `button`), que causava botões diferentes por tela.
+- **Ícones**: SVG próprios em `Icon.jsx` (sem biblioteca de ícones).
+- **Erros de API**: `request()` lança `ApiError` (status + título + mensagem em pt-BR por código HTTP;
+  `fetch` sem resposta vira "Sem conexão"). Mensagem do backend (`{ message }`) tem prioridade.
+- **Toasts** (`useToast()`): ação do usuário que falha vira toast; erro que impede a tela de existir
+  (mesa/pedido inválido) continua tela cheia. Promise rejeitada com `ApiError` sem `catch` também vira toast.
+- **Confirmações no admin**: `useDialog().confirm/prompt` no lugar de `confirm()`/`prompt()` nativos.
+- **Permissão na UI**: a interface esconde ações que o perfil não pode fazer (ex.: cadastrar mesa só para
+  Admin), mas a autorização de verdade continua no backend (403).

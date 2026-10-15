@@ -10,6 +10,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Regra obrigatória do AGENTS.md: commit feito com IA exige entrada em docs/AI_CHANGELOG.md.
+  ai-changelog:
+    name: Registro de mudanças por IA
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # histórico completo: o script compara com a branch base
+
+      - name: Verificar docs/AI_CHANGELOG.md
+        run: bash scripts/check-ai-changelog.sh "origin/${{ github.base_ref }}" HEAD
+
   backend:
     name: Backend (build + test)
     runs-on: ubuntu-latest

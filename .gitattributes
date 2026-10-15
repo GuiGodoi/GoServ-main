@@ -1,0 +1,2 @@
+# Scripts de shell precisam de LF mesmo no Windows (CRLF quebra o bash no CI/Linux).
+*.sh text eol=lf
