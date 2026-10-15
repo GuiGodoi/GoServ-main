@@ -52,7 +52,7 @@
   `AI-NNNN`); IA que não deixa rastro depende de seguir o `AGENTS.md`. Push direto na `main` não passa pelo job
   (só pull requests). Não há registro retroativo anterior ao AI-0001: os commits `6dda690` e `3598d18` não têm
   autoria de IA documentada, nem confirmação de que não houve.
-- **Commit:** pendente
+- **Commit:** 57d7ff1
 
 ## AI-0004 · 2026-10-15 · Checklist de testes da UI e decisões registradas
 - **IA:** Claude Code — Claude Sonnet 5.5
@@ -63,7 +63,7 @@
 - **Validação:** conferido contra o código e os comportamentos observados nas telas durante AI-0001 e AI-0003.
 - **Não testado / riscos:** o checklist não foi executado por uma pessoa; os itens dependem de dados cadastrados
   (categoria, produtos com foto, promoção, mesa), pois o snapshot do banco só tem os usuários.
-- **Commit:** pendente
+- **Commit:** 57d7ff1
 
 ## AI-0003 · 2026-10-15 · Toasts de erro e `ApiError` (admin e client)
 - **IA:** Claude Code — Claude Opus 5.5
@@ -86,7 +86,7 @@
 - **Não testado / riscos:** toast de "Sem conexão" (API parada), telas de erro de QR Codes/Relatórios, falha do
   SignalR em pagamento/acompanhamento e o erro de adicionais no modal foram apenas revisados no código.
   Corrige comportamento de AI-0001 (erros inline), sem desfazê-lo.
-- **Commit:** pendente
+- **Commit:** 6ab67cd
 
 ## AI-0002 · 2026-10-15 · Ambiente local: banco e stack de desenvolvimento
 - **IA:** Claude Code — Claude Opus 5.5
@@ -125,7 +125,7 @@
   Incidente: um `npm install` rodado na pasta errada adicionou `"goserv": "file:.."` aos `package.json`; foi
   revertido (`git checkout` dos manifestos) e só `qrcode` foi reinstalado no client. Rodar `npm install` em
   `client/` ao atualizar.
-- **Commit:** pendente
+- **Commit:** 6ab67cd
 
 ---
 
